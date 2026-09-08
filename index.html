@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>固定團班表</title>
+<style>
+:root{
+  --bg:#F3EEE3; --card:#FFFCF6; --line:#E2DACA; --ink:#3A362E; --ink-soft:#8A8271;
+  --tiff:#3FBFAE; --tiff-deep:#2A9E8F; --tiff-pale:#DFF3EF;
+  --yes:#6FA84B; --yes-pale:#E4EFD6; --maybe:#E2A03C; --maybe-pale:#F9EAD1;
+  --none:#EFEADE;
+  --tank:#4A7EC4; --healer:#5EA96B; --dps:#C05A4E;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);
+  font-family:system-ui,-apple-system,"Noto Sans TC","Microsoft JhengHei",sans-serif;
+  font-size:15px;line-height:1.55;padding-bottom:60px;-webkit-text-size-adjust:100%}
+.wrap{max-width:960px;margin:0 auto;padding:0 10px}
+button{font:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select{font:inherit;color:inherit}
+
+header{background:var(--tiff-deep);color:#fff;padding:12px 0;margin-bottom:12px}
+header .wrap{display:flex;align-items:center;gap:8px}
+header h1{font-size:18px;margin:0;flex:1;font-weight:700}
+.icon-btn{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;
+  background:rgba(255,255,255,.16);font-size:16px}
+.icon-btn:hover{background:rgba(255,255,255,.32)}
+
+/* ---- 身分列 ---- */
+.me-bar{background:var(--card);border:1px solid var(--line);border-radius:11px;
+  padding:8px 11px;margin-bottom:12px;display:flex;align-items:center;gap:9px;flex-wrap:wrap;font-size:14px}
+.me-bar .who{font-weight:700;display:flex;align-items:center;gap:6px}
+.me-bar .sp{margin-left:auto;display:flex;gap:6px}
+.mini{padding:5px 11px;border-radius:8px;border:1.5px solid var(--line);background:#fff;font-size:13px}
+.mini.solid{background:var(--tiff-deep);border-color:var(--tiff-deep);color:#fff;font-weight:700}
+.dot{width:8px;height:8px;border-radius:50%;flex:none}
+.dot.tank{background:var(--tank)} .dot.healer{background:var(--healer)} .dot.dps{background:var(--dps)}
+
+/* ---- 班表矩陣 ---- */
+.board{background:var(--card);border:1px solid var(--line);border-radius:13px;
+  overflow:hidden;margin-bottom:12px}
+.sect{background:var(--tiff-deep);color:#fff;padding:7px 13px;font-size:14px;
+  font-weight:700;letter-spacing:2px}
+.board + .board .sect{background:#7FB9B0}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
+.grid th,.grid td{border-bottom:1px solid #F0EADD;border-right:1px solid #F0EADD;padding:0;text-align:center}
+.grid th:last-child,.grid td:last-child{border-right:none}
+.grid thead th{background:#FBF7EE;padding:7px 2px;font-size:12px;font-weight:700;line-height:1.3}
+.grid thead th .dd{font-size:15px}
+.grid thead th .wd{color:var(--tiff-deep)}
+.grid thead th.tod{background:var(--tiff-pale)}
+.grid thead th small{display:block;font-weight:400;color:var(--ink-soft);font-size:10px}
+.colhd{width:100%;padding:0}
+th.namecol,td.namecol{width:88px;text-align:left;padding:6px 8px;position:sticky;left:0;
+  background:var(--card);z-index:2;border-right:1px solid var(--line)}
+.grid thead th.namecol{background:#FBF7EE}
+tr.mine td{background:var(--tiff-pale)}
+tr.mine td.namecol{background:var(--tiff-pale)}
+.pname{display:flex;align-items:center;gap:5px;font-size:13px;font-weight:600;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.cell{width:100%;min-height:46px;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:1px;background:var(--none);font-size:12px;color:var(--ink-soft)}
+.cell.yes{background:var(--yes-pale);color:#41682A}
+.cell.maybe{background:var(--maybe-pale);color:#8A5F14}
+.cell .mk{font-size:16px;line-height:1;font-weight:700}
+.cell.yes .mk{color:var(--yes)} .cell.maybe .mk{color:var(--maybe)}
+.cell .tm{font-size:10px;line-height:1.1}
+.cell .nt{font-size:10px}
+button.cell{cursor:pointer}
+button.cell:active{filter:brightness(.94)}
+td.locked .cell{cursor:default;opacity:.92}
+
+tfoot td{background:#FBF7EE;padding:6px 3px;font-size:11px;line-height:1.35}
+tfoot .n{font-size:14px;font-weight:700;display:block}
+tfoot .gap{color:var(--dps);font-weight:700}
+tfoot .ok{color:var(--yes);font-weight:700}
+tfoot .mb{color:var(--maybe)}
+
+/* ---- 時間軸 ---- */
+.tlbox{border-top:1px solid var(--line);padding:11px 12px;background:#FBF7EE}
+.tlbox h3{margin:0 0 8px;font-size:14px}
+.tl{display:flex;align-items:flex-end;gap:2px;height:54px}
+.tl-col{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;
+  background:var(--none);border-radius:3px;overflow:hidden;min-width:0}
+.tl-col.full{outline:2px solid var(--yes)}
+.tl-maybe{background:var(--maybe-pale);width:100%}
+.tl-yes{background:var(--yes);width:100%}
+.tl-axis{display:flex;gap:2px;margin-top:3px}
+.tl-axis span{flex:1;font-size:10px;color:var(--ink-soft);text-align:center;min-width:0;overflow:hidden}
+.legend{font-size:11px;color:var(--ink-soft);margin-top:6px}
+
+/* ---- 公告 ---- */
+.notice{background:#FFF6E0;border:1px solid #E8D9AE;border-left:5px solid var(--maybe);
+  border-radius:11px;padding:10px 12px;margin-bottom:12px;font-size:14px;white-space:pre-wrap}
+.notice .nh{font-size:12px;color:#9A7B33;font-weight:700;margin-bottom:3px;letter-spacing:1px}
+
+/* ---- 分頁 ---- */
+.tabs{display:flex;gap:6px;margin-bottom:12px}
+.tabs button{flex:1;padding:9px 0;border-radius:10px;border:1.5px solid var(--line);
+  background:var(--card);font-size:14px;font-weight:700;color:var(--ink-soft)}
+.tabs button.on{background:var(--tiff-deep);border-color:var(--tiff-deep);color:#fff}
+
+/* ---- 戰報 ---- */
+.logbox{border-top:1px solid var(--line);padding:11px 12px;background:#FFFDF6}
+.logbox h4{margin:0 0 6px;font-size:13px;color:var(--ink-soft);letter-spacing:1px}
+.prog{font-size:14px;white-space:pre-wrap}
+.prog.none{color:var(--ink-soft);font-style:italic}
+.links{margin-top:7px;display:flex;flex-direction:column;gap:4px}
+.links a{font-size:13px;color:var(--tiff-deep);word-break:break-all}
+.linkrow{display:flex;gap:6px;align-items:center}
+.linkrow input{flex:1;padding:7px 9px;border-radius:8px;border:1.5px solid var(--line);background:#fff;font-size:13px}
+.logedit{margin-top:9px;padding-top:9px;border-top:1px dashed var(--line)}
+.logedit textarea{width:100%;padding:8px 10px;border-radius:9px;border:1.5px solid var(--line);
+  background:#fff;font:inherit;font-size:14px;resize:vertical;min-height:62px}
+.entry{background:var(--card);border:1px solid var(--line);border-radius:13px;
+  margin-bottom:11px;overflow:hidden}
+.entry-hd{padding:9px 12px;background:#FBF7EE;border-bottom:1px solid var(--line);
+  display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
+.entry-hd .dd{font-size:16px;font-weight:700}
+.entry-hd .wd{color:var(--tiff-deep);font-weight:700;font-size:14px}
+.entry-hd .att{margin-left:auto;font-size:12px;color:var(--ink-soft)}
+.entry-bd{padding:10px 12px}
+
+/* ---- 我的細項 ---- */
+.mysec{background:var(--card);border:1px solid var(--line);border-radius:13px;
+  padding:11px 12px;margin-bottom:12px}
+.mysec h3{margin:0 0 9px;font-size:14px}
+.myrow{padding:8px 0;border-bottom:1px solid #F0EADD}
+.myrow:last-child{border-bottom:none}
+.myrow .hd{font-size:13px;font-weight:700;margin-bottom:6px;display:flex;gap:7px;align-items:center}
+.tag{font-size:10px;padding:1px 7px;border-radius:999px;font-weight:700;color:#fff}
+.tag.yes{background:var(--yes)} .tag.maybe{background:var(--maybe)}
+.ctrl{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.ctrl select{padding:8px 8px;border-radius:8px;border:1.5px solid var(--line);background:#fff}
+.ctrl input{padding:8px 9px;border-radius:8px;border:1.5px solid var(--line);background:#fff;
+  flex:1;min-width:130px}
+
+/* ---- modal ---- */
+.mask{position:fixed;inset:0;background:rgba(40,36,30,.55);display:none;
+  align-items:flex-start;justify-content:center;padding:18px 11px;overflow:auto;z-index:60}
+.mask.on{display:flex}
+.modal{background:var(--card);border-radius:15px;width:100%;max-width:540px;padding:17px}
+.modal h2{margin:0 0 13px;font-size:17px}
+.fld{margin-bottom:11px}
+.fld label{display:block;font-size:13px;color:var(--ink-soft);margin-bottom:4px}
+.fld input,.fld select,.fld textarea{width:100%;padding:9px 10px;border-radius:9px;
+  border:1.5px solid var(--line);background:#fff;font:inherit}
+.fld textarea{resize:vertical;min-height:62px}
+.btn{padding:9px 15px;border-radius:9px;background:var(--tiff-deep);color:#fff;font-weight:700}
+.btn.ghost{background:#fff;border:1.5px solid var(--line);color:var(--ink)}
+.btn.danger{background:#C05A4E}
+.btnrow{display:flex;gap:7px;justify-content:flex-end;margin-top:15px;flex-wrap:wrap}
+.wk{display:flex;gap:5px;flex-wrap:wrap}
+.wk button{padding:7px 0;width:42px;border-radius:9px;border:1.5px solid var(--line);background:#fff;font-size:13px}
+.wk button.on{background:var(--tiff-deep);border-color:var(--tiff-deep);color:#fff;font-weight:700}
+.pick{display:flex;flex-direction:column;gap:6px;max-height:230px;overflow:auto}
+.pick button{padding:10px 12px;border-radius:9px;border:1.5px solid var(--line);
+  background:#fff;text-align:left;display:flex;align-items:center;gap:8px}
+.mrow{display:flex;align-items:center;gap:6px;padding:7px 0;border-bottom:1px solid #F0EADD;font-size:14px}
+.mrow:last-child{border-bottom:none}
+.mrow .g{flex:1;display:flex;align-items:center;gap:6px}
+.hint{font-size:12px;color:var(--ink-soft);margin-top:5px}
+.err{color:#C05A4E;font-size:13px;margin-top:6px}
+.empty{padding:26px 14px;text-align:center;color:var(--ink-soft)}
+.statrow{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #F0EADD;font-size:14px}
+footer{text-align:center;color:var(--ink-soft);font-size:12px;padding:16px 0}
+
+@media (max-width:520px){
+  th.namecol,td.namecol{width:66px;padding:5px 5px}
+  .pname{font-size:12px}
+  .grid thead th{font-size:11px}
+  .cell{min-height:48px}
+}
+</style>
+</head>
+<body>
+
+<header><div class="wrap">
+  <h1 id="teamName">固定團班表</h1>
+  <button class="icon-btn" id="btnAdmin" title="團長設定">⚙</button>
+</div></header>
+
+<div class="wrap" id="app"><div class="empty">連線中…</div></div>
+<footer id="foot"></footer>
+<div class="mask" id="mask"><div class="modal" id="modal"></div></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, onValue, set, update, remove, get }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+const DB_URL = "https://ff14-schedule-574c5-default-rtdb.asia-southeast1.firebasedatabase.app";
+const db = getDatabase(initializeApp({ databaseURL: DB_URL }));
+
+/* ================= 工具 ================= */
+const $ = s => document.querySelector(s);
+const WD = ["日","一","二","三","四","五","六"];
+const ROLE = { tank:{n:"坦",c:"tank",o:0}, healer:{n:"補",c:"healer",o:1}, dps:{n:"DPS",c:"dps",o:2} };
+
+const hm2m = s => { const [h,m] = String(s).split(":").map(Number); return h*60+m; };
+const raw  = m => `${String(Math.floor(m/60)).padStart(2,"0")}:${String(m%60).padStart(2,"0")}`;
+const hhmm = m => `${String(Math.floor(m/60)%24).padStart(2,"0")}:${String(m%60).padStart(2,"0")}`;
+const label = m => m >= 1440 ? `${hhmm(m)} (隔日)` : hhmm(m);
+const short = m => m >= 1440 ? `${hhmm(m)}⁺` : hhmm(m);
+const dkey = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+const esc = s => String(s??"").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+async function hash(s){
+  if (window.crypto?.subtle && window.isSecureContext){
+    const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("ff14/"+s));
+    return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("");
+  }
+  let h = 5381; for (const ch of "ff14/"+s) h = ((h*33) ^ ch.charCodeAt(0)) >>> 0;   // file:// 後備
+  return "fb"+h.toString(16);
+}
+const uid = () => "m"+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+
+/* ================= 狀態 ================= */
+let CFG = null, RES = {}, READY = false;
+let AUTH = null;                                   // {id, h}
+try { AUTH = JSON.parse(localStorage.getItem("ff14_auth") || "null"); } catch {}
+let ADMIN = sessionStorage.getItem("ff14_admin") === "1";
+let TLDAY = null;                                  // 展開時間軸的日期
+let LOGS = {}, TAB = "board";                      // 戰報資料 / 目前分頁
+let HIST_N = 8;                                    // 歷史班表一次顯示幾週
+
+onValue(ref(db,"config"), async s => {
+  const v = s.val();
+  // 舊版把名單存成陣列且沒有密碼欄位，先就地轉成物件再繼續
+  if (v && Array.isArray(v.members)){
+    const obj = {};
+    v.members.forEach((m,i) => { if (m && m.name)
+      obj[m.id || uid()] = {name:m.name, role:ROLE[m.role]?m.role:"dps", pwHash:"", createdAt:Date.now()+i}; });
+    await set(ref(db,"config/members"), obj);
+    return;                       // 等轉換後的事件再渲染
+  }
+  CFG = v; READY = true; render();
+});
+onValue(ref(db,"responses"), s => { RES = s.val() || {}; render(); });
+onValue(ref(db,"logs"),      s => { LOGS = s.val() || {}; render(); });
+
+const rol = m => ROLE[m?.role] || ROLE.dps;
+const members = () => Object.entries(CFG?.members || {})
+  .map(([id,m]) => ({...m, id, role: rol(m)===ROLE.dps && !ROLE[m.role] ? "dps" : m.role}))
+  .sort((a,b) => (rol(a).o - rol(b).o) || ((a.createdAt||0) - (b.createdAt||0)));
+
+function meObj(){
+  if (!AUTH) return null;
+  const m = members().find(x => x.id === AUTH.id);
+  if (!m) return null;
+  if ((m.pwHash||"") !== AUTH.h) return null;       // 密碼被改過 → 需重新登入
+  return m;
+}
+const canEdit = id => ADMIN || (meObj()?.id === id);
+
+/* ================= 場次 ================= */
+function sessions(){
+  const today = new Date(); today.setHours(0,0,0,0);
+  const mon = new Date(today); mon.setDate(today.getDate() - ((today.getDay()+6)%7));
+  const out = [];
+  for (let i=0;i<14;i++){
+    const d = new Date(mon); d.setDate(mon.getDate()+i);
+    if (d < today || !CFG.weekdays.includes(d.getDay())) continue;
+    out.push({d, k:dkey(d), week: i<7 ? "當週" : "次週"});
+  }
+  return out;
+}
+
+/* ================= 渲染 ================= */
+function render(){
+  if (!READY) return;
+  if (!CFG) return firstRun();
+  $("#teamName").textContent = CFG.teamName || "固定團班表";
+
+  const ms = members(), me = meObj(), S = sessions();
+  let h = noticeBar() + meBar(me, ms) + tabBar();
+
+  if (TAB === "log"){
+    h += logPage(ms);
+  } else if (TAB === "hist"){
+    h += histPage(ms);
+  } else if (!ms.length){
+    h += `<div class="board"><div class="empty">名單還是空的。<br>點上方「加入班表」把自己加進來。</div></div>`;
+  } else if (!S.length){
+    h += `<div class="board"><div class="empty">當週與次週都沒有排定的場次。</div></div>`;
+  } else {
+    h += board(S.filter(s=>s.week==="當週"), ms, me, "當週")
+       + board(S.filter(s=>s.week==="次週"), ms, me, "次週");
+    if (me) h += mySection(S, me);
+  }
+  $("#app").innerHTML = h;
+  bind(S, ms, me);
+  $("#foot").innerHTML = `基準時段 ${label(hm2m(CFG.start))}–${label(hm2m(CFG.end))}　·　資料即時同步`;
+}
+
+function meBar(me, ms){
+  if (me) return `<div class="me-bar">
+    <span class="who"><span class="dot ${ROLE[me.role].c}"></span>${esc(me.name)}</span>
+    <span style="color:var(--ink-soft);font-size:13px">${ROLE[me.role].n}</span>
+    ${ADMIN?`<span class="tag" style="background:var(--tiff-deep)">團長模式</span>`:""}
+    <span class="sp">
+      <button class="mini" id="btnMy">我的設定</button>
+      <button class="mini" id="btnOut">登出</button>
+    </span></div>`;
+  return `<div class="me-bar">
+    <span style="color:var(--ink-soft)">尚未登入，目前只能看不能改</span>
+    <span class="sp">
+      ${ms.length?`<button class="mini solid" id="btnIn">我是誰</button>`:""}
+      <button class="mini ${ms.length?"":"solid"}" id="btnJoin">＋ 加入班表</button>
+    </span></div>`;
+}
+
+function noticeBar(){
+  const n = (CFG.notice || "").trim();
+  return n ? `<div class="notice"><div class="nh">公告</div>${esc(n)}</div>` : "";
+}
+function tabBar(){
+  return `<div class="tabs">
+    <button class="${TAB==="board"?"on":""}" data-tab="board">班表</button>
+    <button class="${TAB==="hist"?"on":""}" data-tab="hist">歷史班表</button>
+    <button class="${TAB==="log"?"on":""}" data-tab="log">戰報紀錄</button></div>`;
+}
+
+/* 歷史班表：過去的場次，依週分組、由近到遠。純檢視，不可修改 */
+function histPage(ms){
+  const today = dkey(new Date());
+  const days = [...new Set([...Object.keys(RES), ...Object.keys(LOGS)])]
+    .filter(k => k < today);
+  if (!days.length) return `<div class="board"><div class="empty">
+    還沒有過去的場次。<br>時間走過今天之後，這裡就會開始累積。</div></div>`;
+
+  const weeks = new Map();
+  for (const k of days){
+    const d = new Date(k+"T00:00:00");
+    const mon = new Date(d); mon.setDate(d.getDate() - ((d.getDay()+6)%7));
+    const wk = dkey(mon);
+    if (!weeks.has(wk)) weeks.set(wk, []);
+    weeks.get(wk).push(k);
+  }
+  const list = [...weeks.entries()].sort((a,b) => a[0] < b[0] ? 1 : -1);
+
+  let h = list.slice(0, HIST_N).map(([wk, ks]) => {
+    const mon = new Date(wk+"T00:00:00"), sun = new Date(mon); sun.setDate(mon.getDate()+6);
+    const title = `${mon.getMonth()+1}/${mon.getDate()} – ${sun.getMonth()+1}/${sun.getDate()}`;
+    return histTable(title, ks.sort().map(k => ({k, d:new Date(k+"T00:00:00")})), ms);
+  }).join("");
+
+  if (list.length > HIST_N) h += `<div style="text-align:center;margin-bottom:14px">
+    <button class="btn ghost" id="more">顯示更早的紀錄（還有 ${list.length-HIST_N} 週）</button></div>`;
+  return h;
+}
+
+function histTable(title, dates, ms){
+  const head = dates.map(({d}) => `<th>
+    <span class="wd">週${WD[d.getDay()]}</span>
+    <span class="dd">${d.getMonth()+1}/${d.getDate()}</span></th>`).join("");
+  const rows = ms.map(m => `<tr>
+    <td class="namecol"><span class="pname">
+      <span class="dot ${ROLE[m.role].c}"></span>${esc(m.name)}</span></td>
+    ${dates.map(({k}) => cell(k, m, true)).join("")}</tr>`).join("");
+  const foot = dates.map(({k}) => {
+    const g = summarize(k, ms);
+    return `<td><span class="n">${g.yes}</span>${g.full?`<span class="ok">齊</span>`:""}</td>`;
+  }).join("");
+  return `<div class="board"><div class="sect">${title}</div><div class="scroll"><table class="grid">
+    <thead><tr><th class="namecol">團員</th>${head}</tr></thead>
+    <tbody>${rows}</tbody>
+    <tfoot><tr><td class="namecol" style="font-size:11px;color:var(--ink-soft)">出席</td>${foot}</tr></tfoot>
+  </table></div></div>`;
+}
+
+// 只允許 http(s)，擋掉 javascript: 這類會在點擊時執行的網址
+const safeUrl = u => /^https?:\/\//i.test(String(u||"").trim()) ? String(u).trim() : null;
+// 貼上時常常會少打 https://，補起來
+const norm = u => /^https?:\/\//i.test(u) ? u : "https://" + u.replace(/^\/+/, "");
+
+function logBlock(k, ms){
+  const L = LOGS[k] || {};
+  const links = Object.entries(L.links || {});
+  let h = `<h4>當日進度</h4>
+    <div class="prog ${L.progress?"":"none"}">${L.progress ? esc(L.progress) : "（尚未記錄）"}</div>`;
+  const good = links.filter(([,u]) => safeUrl(u));
+  if (good.length) h += `<div class="links">${good.map(([,u]) =>
+    `<a href="${esc(safeUrl(u))}" target="_blank" rel="noopener noreferrer">🔗 ${esc(u)}</a>`).join("")}</div>`;
+  if (ADMIN){
+    h += `<div class="logedit">
+      <textarea data-lp="${k}" placeholder="今天推到哪？例：P3 減速位穩定，開始練 P4 前半">${esc(L.progress||"")}</textarea>
+      <div class="links">
+        ${links.map(([id,u]) => `<div class="linkrow">
+          <input data-lu="${k}|${id}" value="${esc(u)}">
+          <button class="mini" data-lx="${k}|${id}" style="color:#C05A4E">✕</button></div>`).join("")}
+        <div class="linkrow">
+          <input data-ln="${k}" placeholder="貼上 FFLogs 或其他戰報網址">
+          <button class="mini solid" data-la="${k}">新增</button></div>
+      </div></div>`;
+  }
+  return h;
+}
+
+function logPage(ms){
+  const today = dkey(new Date());
+  const keys = [...new Set([...Object.keys(LOGS), ...Object.keys(RES)])]
+    .filter(k => k < today).sort().reverse();
+  if (!keys.length) return `<div class="board"><div class="empty">
+    還沒有結束的場次。<br>打完之後，團長在班表上點該日的欄標題就能記錄進度。</div></div>`;
+  return keys.map(k => {
+    const d = new Date(k+"T00:00:00");
+    const att = ms.filter(m => (RES[k]||{})[m.id]?.status === "yes");
+    return `<div class="entry">
+      <div class="entry-hd">
+        <span class="dd">${d.getMonth()+1}/${d.getDate()}</span>
+        <span class="wd">週${WD[d.getDay()]}</span>
+        <span class="att">出席 ${att.length} 人${att.length ? "：" + att.map(m=>esc(m.name)).join("、") : ""}</span>
+      </div>
+      <div class="entry-bd">${logBlock(k, ms)}</div></div>`;
+  }).join("");
+}
+
+function board(S, ms, me, title){
+  if (!S.length) return `<div class="board">
+    <div class="sect">${title}</div>
+    <div class="empty" style="padding:16px">這一週已經沒有場次了。</div></div>`;
+
+  const head = S.map(s => {
+    const tod = s.k === dkey(new Date());
+    return `<th class="${tod?"tod":""}"><button class="colhd" data-tl="${s.k}">
+      <span class="wd">週${WD[s.d.getDay()]}</span>
+      <span class="dd">${s.d.getMonth()+1}/${s.d.getDate()}</span>
+      <small>${tod?"今天":"&nbsp;"}</small></button></th>`;
+  }).join("");
+
+  const rows = ms.map(m => `<tr class="${me&&me.id===m.id?"mine":""}">
+    <td class="namecol"><span class="pname">
+      <span class="dot ${ROLE[m.role].c}"></span>${esc(m.name)}</span></td>
+    ${S.map(s => cell(s.k, m)).join("")}</tr>`).join("");
+
+  const foot = S.map(s => {
+    const g = summarize(s.k, ms);
+    return `<td><span class="n">${g.yes}</span>
+      ${g.maybe?`<span class="mb">+${g.maybe}?</span><br>`:""}
+      ${g.full ? `<span class="ok">職能齊備</span>` :
+        (g.gapText ? `<span class="gap">缺 ${g.gapText}</span>` : `<span class="gap">人數不足</span>`)}</td>`;
+  }).join("");
+
+  return `<div class="board"><div class="sect">${title}</div><div class="scroll"><table class="grid">
+    <thead><tr><th class="namecol">團員</th>${head}</tr></thead>
+    <tbody>${rows}</tbody>
+    <tfoot><tr><td class="namecol" style="font-size:11px;color:var(--ink-soft)">確定人數</td>${foot}</tr></tfoot>
+  </table></div>${TLDAY ? timelineBox(TLDAY, ms) : ""}</div>`;
+}
+
+function cell(k, m, readonly){
+  const r = (RES[k]||{})[m.id];
+  const st = r?.status || "no";
+  const custom = r && (r.start !== CFG.start || r.end !== CFG.end);
+  const ed = !readonly && canEdit(m.id);
+  const inner = st === "no"
+    ? `<span class="mk">·</span>`
+    : `<span class="mk">${st==="yes"?"✓":"?"}</span>
+       ${custom?`<span class="tm">${short(hm2m(r.start))}–${short(hm2m(r.end))}</span>`:""}
+       ${r?.note?`<span class="nt">💬</span>`:""}`;
+  return `<td class="${ed?"":"locked"}">
+    <${ed?"button":"div"} class="cell ${st}" ${ed?`data-cy="${k}|${m.id}"`:""}
+      title="${esc(r?.note||"")}">${inner}</${ed?"button":"div"}></td>`;
+}
+
+function mySection(S, me){
+  const items = S.map(s => {
+    const r = (RES[s.k]||{})[me.id];
+    if (!r || r.status === "no") return "";
+    const st = hm2m(r.start), en = hm2m(r.end);
+    return `<div class="myrow">
+      <div class="hd">${s.d.getMonth()+1}/${s.d.getDate()} 週${WD[s.d.getDay()]}
+        <span class="tag ${r.status}">${r.status==="yes"?"可到":"不確定"}</span></div>
+      <div class="ctrl">
+        <select data-t="s" data-k="${s.k}">${opts(rangeS(), st)}</select><span>→</span>
+        <select data-t="e" data-k="${s.k}">${opts(rangeE(), en)}</select>
+        <input data-t="n" data-k="${s.k}" maxlength="20" placeholder="備註（20字內）" value="${esc(r.note||"")}">
+      </div></div>`;
+  }).join("");
+  if (!items.trim()) return "";
+  return `<div class="mysec"><h3>我的時間調整</h3>${items}
+    <div class="hint">預設就是完整基準時段，不用動。要提前、延後、晚到或早退才改。</div></div>`;
+}
+
+const rangeS = () => rg(hm2m(CFG.start)-180, hm2m(CFG.end)-30);
+const rangeE = () => rg(hm2m(CFG.start)+30, hm2m(CFG.end)+180);
+const rg = (a,b) => { const o=[]; for(let t=a;t<=b;t+=30) if(t>=0) o.push(t); return o; };
+const opts = (arr,v) => arr.map(t=>`<option value="${t}" ${t===v?"selected":""}>${label(t)}</option>`).join("");
+
+/* ================= 彙總 ================= */
+function slots(k, ms){
+  const a0 = hm2m(CFG.start)-180, a1 = hm2m(CFG.end)+180;
+  const need = CFG.need || {tank:2,healer:2,dps:4};
+  const R = RES[k] || {};
+  const out = [];
+  for (let t=a0;t<a1;t+=30){
+    const c = {yes:0, maybe:0}, role = {tank:0,healer:0,dps:0};
+    for (const m of ms){
+      const r = R[m.id]; if (!r || r.status==="no") continue;
+      if (hm2m(r.start) <= t && hm2m(r.end) >= t+30){
+        c[r.status]++; if (r.status==="yes") role[m.role]++;
+      }
+    }
+    out.push({t, ...c, full: role.tank>=need.tank && role.healer>=need.healer && role.dps>=need.dps});
+  }
+  return out;
+}
+
+function summarize(k, ms){
+  const need = CFG.need || {tank:2,healer:2,dps:4};
+  const R = RES[k] || {};
+  const have = {tank:0,healer:0,dps:0};
+  let yes=0, maybe=0;
+  for (const m of ms){
+    const r = R[m.id]; if (!r) continue;
+    if (r.status==="yes"){ yes++; have[m.role]++; }
+    else if (r.status==="maybe") maybe++;
+  }
+  const g = [];
+  for (const t of ["tank","healer","dps"]) if (have[t] < need[t]) g.push(`${need[t]-have[t]}${ROLE[t].n}`);
+  return {yes, maybe, full: !g.length, gapText: g.join("、")};
+}
+
+function timelineBox(k, ms){
+  const cols = slots(k, ms), total = ms.length;
+  const d = new Date(k+"T00:00:00");
+  const fr = runs(cols.filter(c=>c.full).map(c=>c.t));
+  return `<div class="tlbox">
+    <h3>${d.getMonth()+1}/${d.getDate()} 週${WD[d.getDay()]}
+      ${fr.length ? `<span style="color:var(--yes)">職能齊備 ${fr.map(r=>`${short(r[0])}–${short(r[1])}`).join("、")}</span>`
+                  : `<span style="color:var(--dps)">目前沒有職能齊備的時段</span>`}</h3>
+    <div class="tl">${cols.map(c=>{
+      const y = total? c.yes/total*100:0, mb = total? c.maybe/total*100:0;
+      return `<div class="tl-col ${c.full?"full":""}" title="${label(c.t)} 確定${c.yes}／不確定${c.maybe}">
+        <div class="tl-maybe" style="height:${mb}%"></div>
+        <div class="tl-yes" style="height:${y}%"></div></div>`;
+    }).join("")}</div>
+    <div class="tl-axis">${cols.map(c=>`<span>${c.t%60===0?short(c.t).slice(0,2):""}</span>`).join("")}</div>
+    <div class="legend">深綠＝確定人數　淺色＝含「不確定」的上限　綠框＝職能齊備　·　再點一次欄標題可收起</div>
+  </div><div class="logbox">${logBlock(k, ms)}</div>`;
+}
+
+function runs(ts){
+  const o=[]; let s=null,p=null;
+  for (const t of ts){ if(s===null){s=t;p=t;} else if(t===p+30){p=t;} else {o.push([s,p+30]);s=t;p=t;} }
+  if (s!==null) o.push([s,p+30]);
+  return o;
+}
+
+/* ================= 互動 ================= */
+function bind(S, ms, me){
+  if ($("#btnIn"))   $("#btnIn").onclick   = pickWho;
+  if ($("#btnJoin")) $("#btnJoin").onclick = joinForm;
+  if ($("#btnMy"))   $("#btnMy").onclick   = myForm;
+  if ($("#btnOut"))  $("#btnOut").onclick  = () => {
+    AUTH=null; localStorage.removeItem("ff14_auth");
+    ADMIN=false; sessionStorage.removeItem("ff14_admin"); render();
+  };
+
+  document.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => {
+    TAB = b.dataset.tab; TLDAY = null; HIST_N = 8; render();
+  });
+  if ($("#more")) $("#more").onclick = () => { HIST_N += 8; render(); };
+  document.querySelectorAll("[data-tl]").forEach(b => b.onclick = () => {
+    TLDAY = (TLDAY === b.dataset.tl) ? null : b.dataset.tl; render();
+  });
+
+  // 戰報：僅團長可寫
+  document.querySelectorAll("[data-lp]").forEach(t => t.onchange = () =>
+    update(ref(db,`logs/${t.dataset.lp}`), {progress:t.value.slice(0,500), updatedAt:Date.now()}));
+  document.querySelectorAll("[data-lu]").forEach(i => i.onchange = () => {
+    const [k,id] = i.dataset.lu.split("|");
+    const v = i.value.trim();
+    v ? update(ref(db,`logs/${k}/links`), {[id]: norm(v)})
+      : remove(ref(db,`logs/${k}/links/${id}`));
+  });
+  document.querySelectorAll("[data-lx]").forEach(b => b.onclick = () => {
+    const [k,id] = b.dataset.lx.split("|");
+    remove(ref(db,`logs/${k}/links/${id}`));
+  });
+  document.querySelectorAll("[data-la]").forEach(b => b.onclick = () => {
+    const k = b.dataset.la, inp = document.querySelector(`[data-ln="${k}"]`);
+    const v = inp.value.trim(); if (!v) return;
+    update(ref(db,`logs/${k}/links`), {["l"+Date.now().toString(36)]: norm(v)});
+    inp.value = "";
+  });
+
+  // 格子：無 → 可到 → 不確定 → 無
+  document.querySelectorAll("[data-cy]").forEach(b => b.onclick = async () => {
+    const [k,id] = b.dataset.cy.split("|");
+    const cur = (RES[k]||{})[id];
+    const st = cur?.status || "no";
+    const nx = st==="no" ? "yes" : st==="yes" ? "maybe" : "no";
+    const p = ref(db, `responses/${k}/${id}`);
+    if (nx === "no") await remove(p);
+    else await set(p, { status:nx, start:cur?.start ?? CFG.start, end:cur?.end ?? CFG.end,
+                        note:cur?.note ?? "", updatedAt:Date.now() });
+  });
+
+  document.querySelectorAll(".ctrl select").forEach(sel => sel.onchange = async () => {
+    const k = sel.dataset.k, id = meObj().id;
+    const cur = (RES[k]||{})[id]; if (!cur) return;
+    let s = hm2m(cur.start), e = hm2m(cur.end);
+    if (sel.dataset.t === "s"){ s = +sel.value; if (e <= s) e = s+30; }
+    else                      { e = +sel.value; if (e <= s) s = e-30; }
+    await update(ref(db,`responses/${k}/${id}`), {start:raw(s), end:raw(e), updatedAt:Date.now()});
+  });
+  document.querySelectorAll(".ctrl input").forEach(inp => inp.onchange = () =>
+    update(ref(db,`responses/${inp.dataset.k}/${meObj().id}`),
+           {note: inp.value.slice(0,20), updatedAt: Date.now()}));
+}
+
+/* ================= 身分：選人 / 登入 ================= */
+function pickWho(){
+  const ms = members();
+  showModal(`<h2>我是誰</h2>
+    <div class="pick">${ms.map(m=>`<button data-pk="${m.id}">
+      <span class="dot ${ROLE[m.role].c}"></span><b>${esc(m.name)}</b>
+      <span style="color:var(--ink-soft);font-size:13px;margin-left:auto">${ROLE[m.role].n}</span>
+    </button>`).join("")}</div>
+    <div class="btnrow"><button class="btn ghost" id="c">取消</button>
+      <button class="btn" id="j">我不在名單上</button></div>`);
+  $("#c").onclick = closeModal;
+  $("#j").onclick = joinForm;
+  document.querySelectorAll("[data-pk]").forEach(b => b.onclick = () => loginForm(b.dataset.pk));
+}
+
+function loginForm(id){
+  const m = CFG.members[id];
+  const fresh = !m.pwHash;
+  showModal(`<h2>${esc(m.name)}</h2>
+    ${fresh ? `<div class="hint" style="margin-bottom:10px">
+      這個帳號還沒有密碼（新加入或被團長重設過）。請設定一組，之後只有你能改自己的班。</div>` : ""}
+    <div class="fld"><label>${fresh?"設定編輯密碼":"編輯密碼"}</label>
+      <input type="password" id="pw" autofocus></div>
+    <div class="err" id="e"></div>
+    <div class="btnrow"><button class="btn ghost" id="c">取消</button>
+      <button class="btn" id="o">${fresh?"設定並登入":"登入"}</button></div>`);
+  $("#c").onclick = closeModal;
+  const go = async () => {
+    const v = $("#pw").value;
+    if (!v) return $("#e").textContent = "請輸入密碼。";
+    const h = await hash(v);
+    if (fresh){
+      await update(ref(db,`config/members/${id}`), {pwHash:h});
+    } else if (h !== m.pwHash){
+      return $("#e").textContent = "密碼不對。忘記的話請團長進設定幫你重設。";
+    }
+    AUTH = {id, h}; localStorage.setItem("ff14_auth", JSON.stringify(AUTH));
+    closeModal();
+  };
+  $("#o").onclick = go;
+  $("#pw").onkeydown = e => { if (e.key === "Enter") go(); };
+}
+
+function joinForm(){
+  showModal(`<h2>加入班表</h2>
+    <div class="fld"><label>角色名</label><input id="nm" autofocus placeholder="團員看到的名字"></div>
+    <div class="fld"><label>職能</label><select id="rl">
+      ${Object.entries(ROLE).map(([k,v])=>`<option value="${k}">${v.n}</option>`).join("")}</select></div>
+    <div class="fld"><label>設定你的編輯密碼</label><input type="password" id="p1"></div>
+    <div class="fld"><label>再輸入一次</label><input type="password" id="p2"></div>
+    <div class="hint">這道密碼只保護「你的那一列」。資料庫本身是公開可讀的，別用你其他地方在用的密碼。</div>
+    <div class="err" id="e"></div>
+    <div class="btnrow"><button class="btn ghost" id="c">取消</button>
+      <button class="btn" id="o">加入</button></div>`);
+  $("#c").onclick = closeModal;
+  $("#o").onclick = async () => {
+    const nm = $("#nm").value.trim(), p1 = $("#p1").value, p2 = $("#p2").value;
+    if (!nm) return $("#e").textContent = "請填角色名。";
+    if (members().some(m => m.name === nm)) return $("#e").textContent = "這個名字已經在名單上了。";
+    if (!p1) return $("#e").textContent = "請設定密碼。";
+    if (p1 !== p2) return $("#e").textContent = "兩次密碼不一樣。";
+    const id = uid(), h = await hash(p1);
+    await set(ref(db,`config/members/${id}`),
+              {name:nm, role:$("#rl").value, pwHash:h, createdAt:Date.now()});
+    AUTH = {id, h}; localStorage.setItem("ff14_auth", JSON.stringify(AUTH));
+    closeModal();
+  };
+}
+
+function myForm(){
+  const me = meObj(); if (!me) return;
+  showModal(`<h2>我的設定</h2>
+    <div class="fld"><label>角色名</label><input id="nm" value="${esc(me.name)}"></div>
+    <div class="fld"><label>職能</label><select id="rl">
+      ${Object.entries(ROLE).map(([k,v])=>`<option value="${k}" ${me.role===k?"selected":""}>${v.n}</option>`).join("")}</select></div>
+    <div class="fld"><label>更改密碼（留空＝不改）</label><input type="password" id="p1"></div>
+    <div class="err" id="e"></div>
+    <div class="btnrow">
+      <button class="btn danger" id="q" style="margin-right:auto">退出班表</button>
+      <button class="btn ghost" id="c">取消</button><button class="btn" id="o">儲存</button></div>`);
+  $("#c").onclick = closeModal;
+  $("#q").onclick = async () => {
+    if (!confirm("確定要把自己從班表移除？你過去的出勤紀錄會保留，但名字會從表上消失。")) return;
+    await remove(ref(db,`config/members/${me.id}`));
+    AUTH = null; localStorage.removeItem("ff14_auth"); closeModal();
+  };
+  $("#o").onclick = async () => {
+    const nm = $("#nm").value.trim();
+    if (!nm) return $("#e").textContent = "請填角色名。";
+    if (members().some(m => m.id !== me.id && m.name === nm))
+      return $("#e").textContent = "這個名字已經有人用了。";
+    const p1 = $("#p1").value;
+    const patch = {name:nm, role:$("#rl").value};
+    if (p1){ patch.pwHash = await hash(p1); AUTH.h = patch.pwHash;
+             localStorage.setItem("ff14_auth", JSON.stringify(AUTH)); }
+    await update(ref(db,`config/members/${me.id}`), patch);
+    closeModal();
+  };
+}
+
+/* ================= 首次設定 / 團長 ================= */
+function firstRun(){
+  $("#app").innerHTML = `<div class="board"><div class="empty">
+    這個班表還沒設定過。<br><br><button class="btn" id="go">開始設定</button></div></div>`;
+  $("#go").onclick = () => setupForm(true);
+}
+
+$("#btnAdmin").onclick = async () => {
+  if (!CFG) return setupForm(true);
+  if (ADMIN) return setupForm(false);
+  showModal(`<h2>團長設定</h2>
+    <div class="fld"><label>團長密碼</label><input type="password" id="pw" autofocus></div>
+    <div class="err" id="e"></div>
+    <div class="btnrow"><button class="btn ghost" id="c">取消</button>
+      <button class="btn" id="o">解鎖</button></div>`);
+  $("#c").onclick = closeModal;
+  const go = async () => {
+    if (await hash($("#pw").value) === CFG.adminHash){
+      ADMIN = true; sessionStorage.setItem("ff14_admin","1"); setupForm(false);
+    } else $("#e").textContent = "密碼不對。";
+  };
+  $("#o").onclick = go;
+  $("#pw").onkeydown = e => { if (e.key === "Enter") go(); };
+};
+
+function setupForm(first){
+  const c = CFG || {teamName:"", weekdays:[2,4], start:"21:00", end:"24:00",
+                    members:{}, need:{tank:2,healer:2,dps:4}};
+  let wd = [...c.weekdays];
+  const need = {...(c.need||{tank:2,healer:2,dps:4})};
+
+  const draw = () => {
+    showModal(`<h2>${first?"初次設定":"團長設定"}</h2>
+      <div class="fld"><label>團名</label>
+        <input id="tn" value="${esc(c.teamName||"")}" placeholder="例：週二四固定團"></div>
+      <div class="fld"><label>公告（留空＝不顯示，可換行）</label>
+        <textarea id="nt" placeholder="例：本週目標 P4 前半，週四停一次">${esc(c.notice||"")}</textarea></div>
+      <div class="fld"><label>固定開團日</label>
+        <div class="wk">${WD.map((w,i)=>`<button class="${wd.includes(i)?"on":""}" data-w="${i}">週${w}</button>`).join("")}</div></div>
+      <div class="fld"><label>基準時段</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select id="bs">${opts2(rg2(0,1439), hm2m(c.start))}</select><span>→</span>
+          <select id="be">${opts2(rg2(30,1740), hm2m(c.end))}</select></div>
+        <div class="hint">超過 24:00 顯示「(隔日)」。團員可在此前後各 3 小時內調整。</div></div>
+      <div class="fld"><label>成團職能需求</label>
+        <div style="display:flex;gap:8px">${["tank","healer","dps"].map(k=>
+          `<label style="flex:1;font-size:13px">${ROLE[k].n}
+            <input type="number" min="0" max="12" id="n_${k}" value="${need[k]}"></label>`).join("")}</div>
+        <div class="hint">表格底部與時間軸的「職能齊備」以此為準。</div></div>
+
+      ${first?"":`<div class="fld"><label>團員名單（團員自己會加入，這裡只用來修）</label>
+        ${members().length ? members().map(m=>`<div class="mrow">
+          <span class="g"><span class="dot ${ROLE[m.role].c}"></span>${esc(m.name)}
+            <small style="color:var(--ink-soft)">${ROLE[m.role].n}${m.pwHash?"":" · 未設密碼"}</small></span>
+          <button class="mini" data-rp="${m.id}">重設密碼</button>
+          <button class="mini" data-dl="${m.id}" style="color:#C05A4E">移除</button>
+        </div>`).join("") : `<div class="hint">還沒有人加入。</div>`}</div>`}
+
+      <div class="fld"><label>團長密碼${first?"":"（留空＝不改）"}</label>
+        <input type="password" id="pw2" placeholder="${first?"設定一組密碼":"不改就留空"}"></div>
+
+      ${first?"":`<div class="btnrow" style="justify-content:flex-start">
+        <button class="btn ghost" id="exp">⬇ 匯出 JSON 備份</button>
+        <button class="btn ghost" id="stat">📊 出席統計</button></div>`}
+      <div class="err" id="err"></div>
+      <div class="btnrow"><button class="btn ghost" id="cancel">取消</button>
+        <button class="btn" id="save">儲存</button></div>`);
+
+    document.querySelectorAll("[data-w]").forEach(b => b.onclick = () => {
+      const i=+b.dataset.w; wd.includes(i)?wd.splice(wd.indexOf(i),1):wd.push(i);
+      keep(); draw();
+    });
+    document.querySelectorAll("[data-rp]").forEach(b => b.onclick = async () => {
+      if (!confirm("重設後，這位團員下次登入時可以自己設一組新密碼。")) return;
+      await update(ref(db,`config/members/${b.dataset.rp}`), {pwHash:""}); draw();
+    });
+    document.querySelectorAll("[data-dl]").forEach(b => b.onclick = async () => {
+      if (!confirm("確定把這位團員從名單移除？")) return;
+      await remove(ref(db,`config/members/${b.dataset.dl}`)); draw();
+    });
+    const keep = () => { c.teamName = $("#tn").value; c.notice = $("#nt").value;
+      c.start = raw(+$("#bs").value); c.end = raw(+$("#be").value);
+      for (const k of ["tank","healer","dps"]) need[k] = +$(`#n_${k}`).value||0; };
+
+    $("#cancel").onclick = closeModal;
+    if ($("#exp"))  $("#exp").onclick  = exportJSON;
+    if ($("#stat")) $("#stat").onclick = showStats;
+
+    $("#save").onclick = async () => {
+      keep();
+      if (!wd.length) return $("#err").textContent = "至少要選一個開團日。";
+      if (+$("#be").value <= +$("#bs").value) return $("#err").textContent = "結束時間必須晚於開始時間。";
+      const pw = $("#pw2").value;
+      if (first && !pw) return $("#err").textContent = "請設定團長密碼。";
+      await update(ref(db,"config"), {
+        teamName: $("#tn").value.trim() || "固定團班表",
+        notice: $("#nt").value.trim(),
+        weekdays: wd.sort((a,b)=>a-b),
+        start: c.start, end: c.end, need,
+        adminHash: pw ? await hash(pw) : CFG.adminHash
+      });
+      if (first){ ADMIN = true; sessionStorage.setItem("ff14_admin","1"); }
+      closeModal();
+    };
+  };
+  draw();
+}
+const rg2 = (a,b) => { const o=[]; for(let t=a;t<=b;t+=30) o.push(t); return o; };
+const opts2 = (arr,v) => arr.map(t=>`<option value="${t}" ${t===v?"selected":""}>${label(t)}</option>`).join("");
+
+/* ================= 匯出 / 統計 ================= */
+async function exportJSON(){
+  const snap = await get(ref(db,"/"));
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(snap.val(),null,2)],{type:"application/json"}));
+  a.download = `ff14-班表備份-${dkey(new Date())}.json`;
+  a.click(); URL.revokeObjectURL(a.href);
+}
+
+function showStats(){
+  const today = dkey(new Date());
+  const past = Object.keys(RES).filter(k => k < today).sort();
+  const tally = {};
+  for (const k of past) for (const [id,r] of Object.entries(RES[k]||{}))
+    if (r.status === "yes") tally[id] = (tally[id]||0)+1;
+  showModal(`<h2>出席統計</h2>
+    <div class="hint">已過去的 ${past.length} 個場次。只有解鎖團長密碼的人看得到。</div>
+    <div style="margin-top:10px">${past.length ? members().map(m=>{
+      const n = tally[m.id]||0;
+      return `<div class="statrow"><span>${esc(m.name)}</span>
+        <span>${n} / ${past.length}　<b>${Math.round(n/past.length*100)}%</b></span></div>`;
+    }).join("") : `<div class="empty">還沒有結束的場次。</div>`}</div>
+    <div class="btnrow"><button class="btn" id="cl">關閉</button></div>`);
+  $("#cl").onclick = closeModal;
+}
+
+/* ================= modal ================= */
+function showModal(h){ $("#modal").innerHTML = h; $("#mask").classList.add("on"); }
+function closeModal(){ $("#mask").classList.remove("on"); render(); }
+$("#mask").onclick = e => { if (e.target.id === "mask") closeModal(); };
+</script>
+</body>
+</html>
