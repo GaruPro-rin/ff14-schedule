@@ -7,10 +7,29 @@
 <style>
 :root{
   --bg:#F3EEE3; --card:#FFFCF6; --line:#E2DACA; --ink:#3A362E; --ink-soft:#8A8271;
-  --tiff:#3FBFAE; --tiff-deep:#2A9E8F; --tiff-pale:#DFF3EF;
+  --tiff:#3FBFAE; --tiff-deep:#2A9E8F; --tiff-pale:#DFF3EF; --sect2:#7FB9B0;
   --yes:#6FA84B; --yes-pale:#E4EFD6; --maybe:#E2A03C; --maybe-pale:#F9EAD1;
   --none:#EFEADE;
   --tank:#4A7EC4; --healer:#5EA96B; --dps:#C05A4E;
+  --field:#fff; --onaccent:#fff; --head:#FBF7EE; --line2:#F0EADD; --logbg:#FFFDF6;
+  --yes-ink:#41682A; --maybe-ink:#8A5F14;
+  --danger:#C05A4E; --danger-line:#E6C4BF; --danger-soft:rgba(192,90,78,.1);
+  --notice-bg:#FFF6E0; --notice-line:#E8D9AE; --notice-ink:#9A7B33;
+  --maskbg:rgba(40,36,30,.55);
+}
+
+/* ---- 深色模式：暖灰底，避免純黑；蒂芬妮綠保留為主色 ---- */
+html[data-theme="dark"]{
+  --bg:#211F1C; --card:#2B2925; --line:#403B34; --ink:#EBE5D8; --ink-soft:#9C9486;
+  --tiff:#3FBFAE; --tiff-deep:#20776C; --tiff-pale:#1D3A36; --sect2:#2C5A54;
+  --yes:#7FBE58; --yes-pale:#2C3A24; --maybe:#E8AE55; --maybe-pale:#3D3220;
+  --none:#34302A;
+  --tank:#6E9BD8; --healer:#74BF80; --dps:#D9756A;
+  --field:#33302B; --onaccent:#F2FBF9; --head:#302D28; --line2:#3A352F; --logbg:#2E2B27;
+  --yes-ink:#A7D584; --maybe-ink:#EFC98A;
+  --danger:#D9756A; --danger-line:#5C3B37; --danger-soft:rgba(217,117,106,.14);
+  --notice-bg:#3A3322; --notice-line:#554A2E; --notice-ink:#D8BE7A;
+  --maskbg:rgba(0,0,0,.66);
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
@@ -21,7 +40,7 @@ body{background:var(--bg);color:var(--ink);
 button{font:inherit;cursor:pointer;border:none;background:none;color:inherit}
 input,select{font:inherit;color:inherit}
 
-header{background:var(--tiff-deep);color:#fff;padding:12px 0;margin-bottom:12px}
+header{background:var(--tiff-deep);color:var(--onaccent);padding:12px 0;margin-bottom:12px}
 header .wrap{display:flex;align-items:center;gap:8px}
 header h1{font-size:18px;margin:0;flex:1;font-weight:700}
 .icon-btn{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;
@@ -33,39 +52,41 @@ header h1{font-size:18px;margin:0;flex:1;font-weight:700}
   padding:8px 11px;margin-bottom:12px;display:flex;align-items:center;gap:9px;flex-wrap:wrap;font-size:14px}
 .me-bar .who{font-weight:700;display:flex;align-items:center;gap:6px}
 .me-bar .sp{margin-left:auto;display:flex;gap:6px}
-.mini{padding:5px 11px;border-radius:8px;border:1.5px solid var(--line);background:#fff;font-size:13px}
-.mini.solid{background:var(--tiff-deep);border-color:var(--tiff-deep);color:#fff;font-weight:700}
+.mini{padding:5px 11px;border-radius:8px;border:1.5px solid var(--line);background:var(--field);font-size:13px}
+.mini.solid{background:var(--tiff-deep);border-color:var(--tiff-deep);color:var(--onaccent);font-weight:700}
 .dot{width:8px;height:8px;border-radius:50%;flex:none}
 .dot.tank{background:var(--tank)} .dot.healer{background:var(--healer)} .dot.dps{background:var(--dps)}
 
 /* ---- 班表矩陣 ---- */
 .board{background:var(--card);border:1px solid var(--line);border-radius:13px;
   overflow:hidden;margin-bottom:12px}
-.sect{background:var(--tiff-deep);color:#fff;padding:7px 13px;font-size:14px;
+.sect{background:var(--tiff-deep);color:var(--onaccent);padding:7px 13px;font-size:14px;
   font-weight:700;letter-spacing:2px}
-.board + .board .sect{background:#7FB9B0}
+.board + .board .sect{background:var(--sect2)}
 .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
 table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
-.grid th,.grid td{border-bottom:1px solid #F0EADD;border-right:1px solid #F0EADD;padding:0;text-align:center}
+.grid th,.grid td{border-bottom:1px solid var(--line2);border-right:1px solid var(--line2);padding:0;text-align:center}
 .grid th:last-child,.grid td:last-child{border-right:none}
-.grid thead th{background:#FBF7EE;padding:7px 2px;font-size:12px;font-weight:700;line-height:1.3}
+.grid thead th{background:var(--head);padding:7px 2px;font-size:12px;font-weight:700;line-height:1.3}
 .grid thead th .dd{font-size:15px}
 .grid thead th .wd{color:var(--tiff-deep)}
 .grid thead th.tod{background:var(--tiff-pale)}
 .grid thead th small{display:block;font-weight:400;color:var(--ink-soft);font-size:10px}
 .colhd{width:100%;padding:0}
-th.namecol,td.namecol{width:88px;text-align:left;padding:6px 8px;position:sticky;left:0;
-  background:var(--card);z-index:2;border-right:1px solid var(--line)}
-.grid thead th.namecol{background:#FBF7EE}
+th.namecol,td.namecol{width:118px;min-width:118px;text-align:left;padding:6px 8px;
+  position:sticky;left:0;background:var(--card);z-index:2;border-right:1px solid var(--line)}
+.grid thead th.namecol{background:var(--head)}
 tr.mine td{background:var(--tiff-pale)}
 tr.mine td.namecol{background:var(--tiff-pale)}
-.pname{display:flex;align-items:center;gap:5px;font-size:13px;font-weight:600;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 名字可折行，不再被切掉；圓點固定不被擠壓 */
+.pname{display:flex;align-items:flex-start;gap:5px;font-size:13px;font-weight:600}
+.pname .dot{flex:none;margin-top:6px}
+.pname .nm-t{min-width:0;line-height:1.3;word-break:break-word;overflow-wrap:anywhere}
 
 .cell{width:100%;min-height:46px;display:flex;flex-direction:column;align-items:center;
   justify-content:center;gap:1px;background:var(--none);font-size:12px;color:var(--ink-soft)}
-.cell.yes{background:var(--yes-pale);color:#41682A}
-.cell.maybe{background:var(--maybe-pale);color:#8A5F14}
+.cell.yes{background:var(--yes-pale);color:var(--yes-ink)}
+.cell.maybe{background:var(--maybe-pale);color:var(--maybe-ink)}
 .cell .mk{font-size:16px;line-height:1;font-weight:700}
 .cell.yes .mk{color:var(--yes)} .cell.maybe .mk{color:var(--maybe)}
 .cell .tm{font-size:10px;line-height:1.1}
@@ -74,14 +95,14 @@ button.cell{cursor:pointer}
 button.cell:active{filter:brightness(.94)}
 td.locked .cell{cursor:default;opacity:.92}
 
-tfoot td{background:#FBF7EE;padding:6px 3px;font-size:11px;line-height:1.35}
+tfoot td{background:var(--head);padding:6px 3px;font-size:11px;line-height:1.35}
 tfoot .n{font-size:14px;font-weight:700;display:block}
 tfoot .gap{color:var(--dps);font-weight:700}
 tfoot .ok{color:var(--yes);font-weight:700}
 tfoot .mb{color:var(--maybe)}
 
 /* ---- 時間軸 ---- */
-.tlbox{border-top:1px solid var(--line);padding:11px 12px;background:#FBF7EE}
+.tlbox{border-top:1px solid var(--line);padding:11px 12px;background:var(--head)}
 .tlbox h3{margin:0 0 8px;font-size:14px}
 .tl{display:flex;align-items:flex-end;gap:2px;height:54px}
 .tl-col{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;
@@ -94,31 +115,35 @@ tfoot .mb{color:var(--maybe)}
 .legend{font-size:11px;color:var(--ink-soft);margin-top:6px}
 
 /* ---- 公告 ---- */
-.notice{background:#FFF6E0;border:1px solid #E8D9AE;border-left:5px solid var(--maybe);
+.notice{background:var(--notice-bg);border:1px solid var(--notice-line);border-left:5px solid var(--maybe);
   border-radius:11px;padding:10px 12px;margin-bottom:12px;font-size:14px;white-space:pre-wrap}
-.notice .nh{font-size:12px;color:#9A7B33;font-weight:700;margin-bottom:3px;letter-spacing:1px}
+.notice .nh{font-size:12px;color:var(--notice-ink);font-weight:700;margin-bottom:3px;letter-spacing:1px}
 
 /* ---- 分頁 ---- */
 .tabs{display:flex;gap:6px;margin-bottom:12px}
 .tabs button{flex:1;padding:9px 0;border-radius:10px;border:1.5px solid var(--line);
   background:var(--card);font-size:14px;font-weight:700;color:var(--ink-soft)}
-.tabs button.on{background:var(--tiff-deep);border-color:var(--tiff-deep);color:#fff}
+.tabs button.on{background:var(--tiff-deep);border-color:var(--tiff-deep);color:var(--onaccent)}
 
 /* ---- 戰報 ---- */
-.logbox{border-top:1px solid var(--line);padding:11px 12px;background:#FFFDF6}
+.logbox{border-top:1px solid var(--line);padding:11px 12px;background:var(--logbg)}
 .logbox h4{margin:0 0 6px;font-size:13px;color:var(--ink-soft);letter-spacing:1px}
 .prog{font-size:14px;white-space:pre-wrap}
 .prog.none{color:var(--ink-soft);font-style:italic}
 .links{margin-top:7px;display:flex;flex-direction:column;gap:4px}
 .links a{font-size:13px;color:var(--tiff-deep);word-break:break-all}
 .linkrow{display:flex;gap:6px;align-items:center}
-.linkrow input{flex:1;padding:7px 9px;border-radius:8px;border:1.5px solid var(--line);background:#fff;font-size:13px}
+.linkrow input{flex:1;padding:7px 9px;border-radius:8px;border:1.5px solid var(--line);background:var(--field);font-size:13px}
+.dangerbar{margin-top:10px;padding-top:9px;border-top:1px dashed var(--line);text-align:right}
+.dangerbar button{color:var(--danger);border-color:var(--danger-line)}
+.delcol{display:block;margin:3px auto 0;font-size:12px;color:var(--danger);
+  padding:2px 6px;border-radius:6px;background:var(--danger-soft)}
 .logedit{margin-top:9px;padding-top:9px;border-top:1px dashed var(--line)}
 .logedit textarea{width:100%;padding:8px 10px;border-radius:9px;border:1.5px solid var(--line);
-  background:#fff;font:inherit;font-size:14px;resize:vertical;min-height:62px}
+  background:var(--field);font:inherit;font-size:14px;resize:vertical;min-height:62px}
 .entry{background:var(--card);border:1px solid var(--line);border-radius:13px;
   margin-bottom:11px;overflow:hidden}
-.entry-hd{padding:9px 12px;background:#FBF7EE;border-bottom:1px solid var(--line);
+.entry-hd{padding:9px 12px;background:var(--head);border-bottom:1px solid var(--line);
   display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
 .entry-hd .dd{font-size:16px;font-weight:700}
 .entry-hd .wd{color:var(--tiff-deep);font-weight:700;font-size:14px}
@@ -129,18 +154,18 @@ tfoot .mb{color:var(--maybe)}
 .mysec{background:var(--card);border:1px solid var(--line);border-radius:13px;
   padding:11px 12px;margin-bottom:12px}
 .mysec h3{margin:0 0 9px;font-size:14px}
-.myrow{padding:8px 0;border-bottom:1px solid #F0EADD}
+.myrow{padding:8px 0;border-bottom:1px solid var(--line2)}
 .myrow:last-child{border-bottom:none}
 .myrow .hd{font-size:13px;font-weight:700;margin-bottom:6px;display:flex;gap:7px;align-items:center}
-.tag{font-size:10px;padding:1px 7px;border-radius:999px;font-weight:700;color:#fff}
+.tag{font-size:10px;padding:1px 7px;border-radius:999px;font-weight:700;color:var(--onaccent)}
 .tag.yes{background:var(--yes)} .tag.maybe{background:var(--maybe)}
 .ctrl{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.ctrl select{padding:8px 8px;border-radius:8px;border:1.5px solid var(--line);background:#fff}
-.ctrl input{padding:8px 9px;border-radius:8px;border:1.5px solid var(--line);background:#fff;
+.ctrl select{padding:8px 8px;border-radius:8px;border:1.5px solid var(--line);background:var(--field)}
+.ctrl input{padding:8px 9px;border-radius:8px;border:1.5px solid var(--line);background:var(--field);
   flex:1;min-width:130px}
 
 /* ---- modal ---- */
-.mask{position:fixed;inset:0;background:rgba(40,36,30,.55);display:none;
+.mask{position:fixed;inset:0;background:var(--maskbg);display:none;
   align-items:flex-start;justify-content:center;padding:18px 11px;overflow:auto;z-index:60}
 .mask.on{display:flex}
 .modal{background:var(--card);border-radius:15px;width:100%;max-width:540px;padding:17px}
@@ -148,39 +173,50 @@ tfoot .mb{color:var(--maybe)}
 .fld{margin-bottom:11px}
 .fld label{display:block;font-size:13px;color:var(--ink-soft);margin-bottom:4px}
 .fld input,.fld select,.fld textarea{width:100%;padding:9px 10px;border-radius:9px;
-  border:1.5px solid var(--line);background:#fff;font:inherit}
+  border:1.5px solid var(--line);background:var(--field);font:inherit}
 .fld textarea{resize:vertical;min-height:62px}
-.btn{padding:9px 15px;border-radius:9px;background:var(--tiff-deep);color:#fff;font-weight:700}
-.btn.ghost{background:#fff;border:1.5px solid var(--line);color:var(--ink)}
-.btn.danger{background:#C05A4E}
+.btn{padding:9px 15px;border-radius:9px;background:var(--tiff-deep);color:var(--onaccent);font-weight:700}
+.btn.ghost{background:var(--field);border:1.5px solid var(--line);color:var(--ink)}
+.btn.danger{background:var(--danger)}
 .btnrow{display:flex;gap:7px;justify-content:flex-end;margin-top:15px;flex-wrap:wrap}
 .wk{display:flex;gap:5px;flex-wrap:wrap}
-.wk button{padding:7px 0;width:42px;border-radius:9px;border:1.5px solid var(--line);background:#fff;font-size:13px}
-.wk button.on{background:var(--tiff-deep);border-color:var(--tiff-deep);color:#fff;font-weight:700}
+.wk button{padding:7px 0;width:42px;border-radius:9px;border:1.5px solid var(--line);background:var(--field);font-size:13px}
+.wk button.on{background:var(--tiff-deep);border-color:var(--tiff-deep);color:var(--onaccent);font-weight:700}
 .pick{display:flex;flex-direction:column;gap:6px;max-height:230px;overflow:auto}
 .pick button{padding:10px 12px;border-radius:9px;border:1.5px solid var(--line);
-  background:#fff;text-align:left;display:flex;align-items:center;gap:8px}
-.mrow{display:flex;align-items:center;gap:6px;padding:7px 0;border-bottom:1px solid #F0EADD;font-size:14px}
+  background:var(--field);text-align:left;display:flex;align-items:center;gap:8px}
+.mrow{display:flex;align-items:center;gap:6px;padding:7px 0;border-bottom:1px solid var(--line2);font-size:14px}
 .mrow:last-child{border-bottom:none}
 .mrow .g{flex:1;display:flex;align-items:center;gap:6px}
 .hint{font-size:12px;color:var(--ink-soft);margin-top:5px}
-.err{color:#C05A4E;font-size:13px;margin-top:6px}
+.err{color:var(--danger);font-size:13px;margin-top:6px}
 .empty{padding:26px 14px;text-align:center;color:var(--ink-soft)}
-.statrow{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #F0EADD;font-size:14px}
+.statrow{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--line2);font-size:14px}
 footer{text-align:center;color:var(--ink-soft);font-size:12px;padding:16px 0}
 
 @media (max-width:520px){
-  th.namecol,td.namecol{width:66px;padding:5px 5px}
-  .pname{font-size:12px}
+  th.namecol,td.namecol{width:92px;min-width:92px;padding:5px 5px}
+  .pname{font-size:12px;gap:4px}
+  .pname .dot{margin-top:5px}
   .grid thead th{font-size:11px}
   .cell{min-height:48px}
 }
 </style>
+<script>
+/* 在畫面繪製前就決定主題，否則深色使用者會先閃一下白底 */
+(function(){
+  var p = localStorage.getItem("ff14_theme") || "auto";
+  var dark = p === "dark" ||
+    (p === "auto" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  document.documentElement.dataset.theme = dark ? "dark" : "light";
+})();
+</script>
 </head>
 <body>
 
 <header><div class="wrap">
   <h1 id="teamName">固定團班表</h1>
+  <button class="icon-btn" id="btnTheme" title="切換深色/淺色">🌙</button>
   <button class="icon-btn" id="btnAdmin" title="團長設定">⚙</button>
 </div></header>
 
@@ -198,6 +234,26 @@ const db = getDatabase(initializeApp({ databaseURL: DB_URL }));
 
 /* ================= 工具 ================= */
 const $ = s => document.querySelector(s);
+
+/* ---- 主題：自動 → 淺色 → 深色 循環，記在這台裝置上 ---- */
+const THEMES = ["auto","light","dark"];
+const THEME_TXT = {auto:"跟隨系統", light:"淺色", dark:"深色"};
+const mqDark = window.matchMedia("(prefers-color-scheme: dark)");
+function applyTheme(){
+  const p = localStorage.getItem("ff14_theme") || "auto";
+  const dark = p === "dark" || (p === "auto" && mqDark.matches);
+  document.documentElement.dataset.theme = dark ? "dark" : "light";
+  const b = $("#btnTheme");
+  b.textContent = p === "auto" ? "🌓" : (p === "dark" ? "☀️" : "🌙");
+  b.title = `目前：${THEME_TXT[p]}（點擊切換）`;
+}
+$("#btnTheme").onclick = () => {
+  const p = localStorage.getItem("ff14_theme") || "auto";
+  localStorage.setItem("ff14_theme", THEMES[(THEMES.indexOf(p)+1) % THEMES.length]);
+  applyTheme();
+};
+mqDark.addEventListener("change", applyTheme);
+applyTheme();
 const WD = ["日","一","二","三","四","五","六"];
 const ROLE = { tank:{n:"坦",c:"tank",o:0}, healer:{n:"補",c:"healer",o:1}, dps:{n:"DPS",c:"dps",o:2} };
 
@@ -355,12 +411,14 @@ function histPage(ms){
 }
 
 function histTable(title, dates, ms){
-  const head = dates.map(({d}) => `<th>
+  const head = dates.map(({k,d}) => `<th>
     <span class="wd">週${WD[d.getDay()]}</span>
-    <span class="dd">${d.getMonth()+1}/${d.getDate()}</span></th>`).join("");
+    <span class="dd">${d.getMonth()+1}/${d.getDate()}</span>
+    ${ADMIN ? `<button class="delcol" data-del="${k}" title="刪除這場紀錄">🗑 刪除</button>` : ""}</th>`).join("");
   const rows = ms.map(m => `<tr>
     <td class="namecol"><span class="pname">
-      <span class="dot ${ROLE[m.role].c}"></span>${esc(m.name)}</span></td>
+      <span class="dot ${ROLE[m.role].c}"></span>
+      <span class="nm-t">${esc(m.name)}</span></span></td>
     ${dates.map(({k}) => cell(k, m, true)).join("")}</tr>`).join("");
   const foot = dates.map(({k}) => {
     const g = summarize(k, ms);
@@ -378,6 +436,27 @@ const safeUrl = u => /^https?:\/\//i.test(String(u||"").trim()) ? String(u).trim
 // 貼上時常常會少打 https://，補起來
 const norm = u => /^https?:\/\//i.test(u) ? u : "https://" + u.replace(/^\/+/, "");
 
+// 移除團員時連他的勾選一起清，否則會留下看不見也刪不掉的孤兒資料
+async function purgeMember(id){
+  await remove(ref(db,`config/members/${id}`));
+  for (const k of Object.keys(RES))
+    if (RES[k] && RES[k][id]) await remove(ref(db,`responses/${k}/${id}`));
+}
+
+// 刪除：hard=true 連進度與 LOGS 一起砍，false 只清勾選
+async function delSession(k, hard){
+  const d = new Date(k+"T00:00:00");
+  const t = `${d.getMonth()+1}/${d.getDate()}（週${WD[d.getDay()]}）`;
+  if (hard){
+    if (!confirm(`確定刪除 ${t} 的整場紀錄？\n\n出勤、當日進度、LOGS 連結都會消失，且無法復原。`)) return;
+    await remove(ref(db,`responses/${k}`));
+    await remove(ref(db,`logs/${k}`));
+  } else {
+    if (!confirm(`確定清空 ${t} 的所有勾選？\n\n大家要重新勾一次。當日進度與 LOGS 會保留。`)) return;
+    await remove(ref(db,`responses/${k}`));
+  }
+}
+
 function logBlock(k, ms){
   const L = LOGS[k] || {};
   const links = Object.entries(L.links || {});
@@ -392,7 +471,7 @@ function logBlock(k, ms){
       <div class="links">
         ${links.map(([id,u]) => `<div class="linkrow">
           <input data-lu="${k}|${id}" value="${esc(u)}">
-          <button class="mini" data-lx="${k}|${id}" style="color:#C05A4E">✕</button></div>`).join("")}
+          <button class="mini" data-lx="${k}|${id}" style="color:var(--danger)">✕</button></div>`).join("")}
         <div class="linkrow">
           <input data-ln="${k}" placeholder="貼上 FFLogs 或其他戰報網址">
           <button class="mini solid" data-la="${k}">新增</button></div>
@@ -415,6 +494,8 @@ function logPage(ms){
         <span class="dd">${d.getMonth()+1}/${d.getDate()}</span>
         <span class="wd">週${WD[d.getDay()]}</span>
         <span class="att">出席 ${att.length} 人${att.length ? "：" + att.map(m=>esc(m.name)).join("、") : ""}</span>
+        ${ADMIN ? `<button class="mini" data-clr="${k}">🧹 清空勾選</button>
+                   <button class="mini" data-del="${k}" style="color:var(--danger)">🗑 刪除這場</button>` : ""}
       </div>
       <div class="entry-bd">${logBlock(k, ms)}</div></div>`;
   }).join("");
@@ -435,7 +516,8 @@ function board(S, ms, me, title){
 
   const rows = ms.map(m => `<tr class="${me&&me.id===m.id?"mine":""}">
     <td class="namecol"><span class="pname">
-      <span class="dot ${ROLE[m.role].c}"></span>${esc(m.name)}</span></td>
+      <span class="dot ${ROLE[m.role].c}"></span>
+      <span class="nm-t">${esc(m.name)}</span></span></td>
     ${S.map(s => cell(s.k, m)).join("")}</tr>`).join("");
 
   const foot = S.map(s => {
@@ -450,7 +532,7 @@ function board(S, ms, me, title){
     <thead><tr><th class="namecol">團員</th>${head}</tr></thead>
     <tbody>${rows}</tbody>
     <tfoot><tr><td class="namecol" style="font-size:11px;color:var(--ink-soft)">確定人數</td>${foot}</tr></tfoot>
-  </table></div>${TLDAY ? timelineBox(TLDAY, ms) : ""}</div>`;
+  </table></div>${(TLDAY && S.some(s => s.k === TLDAY)) ? timelineBox(TLDAY, ms) : ""}</div>`;
 }
 
 function cell(k, m, readonly){
@@ -542,7 +624,10 @@ function timelineBox(k, ms){
     }).join("")}</div>
     <div class="tl-axis">${cols.map(c=>`<span>${c.t%60===0?short(c.t).slice(0,2):""}</span>`).join("")}</div>
     <div class="legend">深綠＝確定人數　淺色＝含「不確定」的上限　綠框＝職能齊備　·　再點一次欄標題可收起</div>
-  </div><div class="logbox">${logBlock(k, ms)}</div>`;
+  </div><div class="logbox">${logBlock(k, ms)}
+    ${ADMIN ? `<div class="dangerbar">
+      <button class="mini" data-clr="${k}">🧹 清空這天的勾選</button></div>` : ""}
+  </div>`;
 }
 
 function runs(ts){
@@ -566,6 +651,9 @@ function bind(S, ms, me){
     TAB = b.dataset.tab; TLDAY = null; HIST_N = 8; render();
   });
   if ($("#more")) $("#more").onclick = () => { HIST_N += 8; render(); };
+
+  document.querySelectorAll("[data-clr]").forEach(b => b.onclick = () => delSession(b.dataset.clr, false));
+  document.querySelectorAll("[data-del]").forEach(b => b.onclick = () => delSession(b.dataset.del, true));
   document.querySelectorAll("[data-tl]").forEach(b => b.onclick = () => {
     TLDAY = (TLDAY === b.dataset.tl) ? null : b.dataset.tl; render();
   });
@@ -697,8 +785,8 @@ function myForm(){
       <button class="btn ghost" id="c">取消</button><button class="btn" id="o">儲存</button></div>`);
   $("#c").onclick = closeModal;
   $("#q").onclick = async () => {
-    if (!confirm("確定要把自己從班表移除？你過去的出勤紀錄會保留，但名字會從表上消失。")) return;
-    await remove(ref(db,`config/members/${me.id}`));
+    if (!confirm("確定要把自己從班表移除？\n\n你過去所有的勾選紀錄也會一併刪除，無法復原。")) return;
+    await purgeMember(me.id);
     AUTH = null; localStorage.removeItem("ff14_auth"); closeModal();
   };
   $("#o").onclick = async () => {
@@ -752,6 +840,14 @@ function setupForm(first){
         <input id="tn" value="${esc(c.teamName||"")}" placeholder="例：週二四固定團"></div>
       <div class="fld"><label>公告（留空＝不顯示，可換行）</label>
         <textarea id="nt" placeholder="例：本週目標 P4 前半，週四停一次">${esc(c.notice||"")}</textarea></div>
+
+      ${first?"":`<div class="fld"><label>團員名單（團員自己會加入，這裡用來修改與移除）</label>
+        ${members().length ? members().map(m=>`<div class="mrow">
+          <span class="g"><span class="dot ${ROLE[m.role].c}"></span>${esc(m.name)}
+            <small style="color:var(--ink-soft)">${ROLE[m.role].n}${m.pwHash?"":" · 未設密碼"}</small></span>
+          <button class="mini" data-rp="${m.id}">重設密碼</button>
+          <button class="mini" data-dl="${m.id}" style="color:var(--danger)">移除</button>
+        </div>`).join("") : `<div class="hint">還沒有人加入。</div>`}</div>`}
       <div class="fld"><label>固定開團日</label>
         <div class="wk">${WD.map((w,i)=>`<button class="${wd.includes(i)?"on":""}" data-w="${i}">週${w}</button>`).join("")}</div></div>
       <div class="fld"><label>基準時段</label>
@@ -764,14 +860,6 @@ function setupForm(first){
           `<label style="flex:1;font-size:13px">${ROLE[k].n}
             <input type="number" min="0" max="12" id="n_${k}" value="${need[k]}"></label>`).join("")}</div>
         <div class="hint">表格底部與時間軸的「職能齊備」以此為準。</div></div>
-
-      ${first?"":`<div class="fld"><label>團員名單（團員自己會加入，這裡只用來修）</label>
-        ${members().length ? members().map(m=>`<div class="mrow">
-          <span class="g"><span class="dot ${ROLE[m.role].c}"></span>${esc(m.name)}
-            <small style="color:var(--ink-soft)">${ROLE[m.role].n}${m.pwHash?"":" · 未設密碼"}</small></span>
-          <button class="mini" data-rp="${m.id}">重設密碼</button>
-          <button class="mini" data-dl="${m.id}" style="color:#C05A4E">移除</button>
-        </div>`).join("") : `<div class="hint">還沒有人加入。</div>`}</div>`}
 
       <div class="fld"><label>團長密碼${first?"":"（留空＝不改）"}</label>
         <input type="password" id="pw2" placeholder="${first?"設定一組密碼":"不改就留空"}"></div>
@@ -792,8 +880,8 @@ function setupForm(first){
       await update(ref(db,`config/members/${b.dataset.rp}`), {pwHash:""}); draw();
     });
     document.querySelectorAll("[data-dl]").forEach(b => b.onclick = async () => {
-      if (!confirm("確定把這位團員從名單移除？")) return;
-      await remove(ref(db,`config/members/${b.dataset.dl}`)); draw();
+      if (!confirm("確定把這位團員從名單移除？\n\n他過去所有的勾選紀錄也會一併刪除，無法復原。")) return;
+      await purgeMember(b.dataset.dl); draw();
     });
     const keep = () => { c.teamName = $("#tn").value; c.notice = $("#nt").value;
       c.start = raw(+$("#bs").value); c.end = raw(+$("#be").value);
