@@ -135,7 +135,8 @@ tfoot .mb{color:var(--maybe)}
 .linkrow{display:flex;gap:6px;align-items:center}
 .linkrow input{flex:1;padding:7px 9px;border-radius:8px;border:1.5px solid var(--line);background:var(--field);font-size:13px}
 /* ---- 募款箱 ---- */
-.fstats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+/* 卡片數量會因為團長模式而變（3 或 4），讓格線自己排 */
+.fstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px;margin-bottom:12px}
 .stat{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:9px 10px;
   text-align:center;min-width:0}
 .stat small{display:block;font-size:11px;color:var(--ink-soft);margin-bottom:2px}
@@ -605,9 +606,9 @@ function fundPage(ms){
     <div class="stat"><small>箱內餘額</small><b>${gil(F.pool)}</b><i>${approx(F.pool)}</i></div>
     <div class="stat"><small>累計捐款</small><b>${gil(F.totalDon)}</b><i>${approx(F.totalDon)}</i></div>
     <div class="stat"><small>累計花費</small><b>${gil(F.totalExp)}</b><i>${approx(F.totalExp)}</i></div>
-    <div class="stat ${F.backOut>0?"warn":""}"><small>${backName?esc(backName):"團長"} 支出</small>
+    ${ADMIN ? `<div class="stat ${F.backOut>0?"warn":""}"><small>${backName?esc(backName):"團長"} 支出</small>
       <b>${gil(F.backOut)}</b><i>${approx(F.backOut)}</i>
-      ${F.adv>0?`<em>其中 ${approx(F.adv)} 未回補</em>`:""}</div>
+      ${F.adv>0?`<em>其中 ${approx(F.adv)} 未回補</em>`:""}</div>` : ""}
   </div>`;
 
   const shareTbl = F.payers.length ? `
