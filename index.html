@@ -141,6 +141,7 @@ tfoot .mb{color:var(--maybe)}
 .stat small{display:block;font-size:11px;color:var(--ink-soft);margin-bottom:2px}
 .stat b{display:block;font-size:15px;font-variant-numeric:tabular-nums;word-break:break-all}
 .stat i{display:block;font-style:normal;font-size:11px;color:var(--ink-soft);margin-top:1px}
+.stat em{display:block;font-style:normal;font-size:10px;color:var(--danger);margin-top:2px}
 .stat.warn b{color:var(--danger)}
 .fnote{padding:9px 13px;font-size:13px;color:var(--ink-soft);border-bottom:1px solid var(--line)}
 .fnote b{color:var(--ink);font-variant-numeric:tabular-nums}
@@ -587,7 +588,9 @@ function computeFund(ms){
   }
   payers.sort((a,b) => b.amt - a.amt);
   const share = payers.length ? totalExp / payers.length : 0;
-  return { evs, pool, adv, net, totalDon, totalExp, share, payers, back };
+  // 墊款人的淨實出：含他自己的捐款，扣掉已被回補的部分
+  const backOut = Math.max(0, net[back] || 0);
+  return { evs, pool, adv, net, totalDon, totalExp, share, payers, back, backOut };
 }
 
 function fundPage(ms){
@@ -602,8 +605,9 @@ function fundPage(ms){
     <div class="stat"><small>箱內餘額</small><b>${gil(F.pool)}</b><i>${approx(F.pool)}</i></div>
     <div class="stat"><small>累計捐款</small><b>${gil(F.totalDon)}</b><i>${approx(F.totalDon)}</i></div>
     <div class="stat"><small>累計花費</small><b>${gil(F.totalExp)}</b><i>${approx(F.totalExp)}</i></div>
-    <div class="stat ${F.adv>0?"warn":""}"><small>${backName?esc(backName):"團長"}墊款未回補</small>
-      <b>${gil(F.adv)}</b><i>${approx(F.adv)}</i></div>
+    <div class="stat ${F.backOut>0?"warn":""}"><small>${backName?esc(backName):"團長"} 支出</small>
+      <b>${gil(F.backOut)}</b><i>${approx(F.backOut)}</i>
+      ${F.adv>0?`<em>其中 ${approx(F.adv)} 未回補</em>`:""}</div>
   </div>`;
 
   const shareTbl = F.payers.length ? `
