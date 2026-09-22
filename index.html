@@ -134,6 +134,35 @@ tfoot .mb{color:var(--maybe)}
 .links a{font-size:13px;color:var(--tiff-deep);word-break:break-all}
 .linkrow{display:flex;gap:6px;align-items:center}
 .linkrow input{flex:1;padding:7px 9px;border-radius:8px;border:1.5px solid var(--line);background:var(--field);font-size:13px}
+/* ---- 募款箱 ---- */
+.fstats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:9px 10px;
+  text-align:center;min-width:0}
+.stat small{display:block;font-size:11px;color:var(--ink-soft);margin-bottom:2px}
+.stat b{display:block;font-size:15px;font-variant-numeric:tabular-nums;word-break:break-all}
+.stat i{display:block;font-style:normal;font-size:11px;color:var(--ink-soft);margin-top:1px}
+.stat.warn b{color:var(--danger)}
+.fnote{padding:9px 13px;font-size:13px;color:var(--ink-soft);border-bottom:1px solid var(--line)}
+.fnote b{color:var(--ink);font-variant-numeric:tabular-nums}
+.ftab td.num{font-variant-numeric:tabular-nums;font-size:13px;padding:6px 8px;text-align:right}
+.ftab td.num i{display:block;font-style:normal;font-size:10px;color:var(--ink-soft)}
+.ftab td.soft{color:var(--ink-soft)}
+.ftab td.plus{color:var(--yes);font-weight:700}
+.ftab td.minus{color:var(--danger);font-weight:700}
+.ftab th{padding:7px 4px;font-size:12px}
+.addbtn{float:right;margin-top:-3px}
+.frow{display:flex;align-items:center;gap:9px;padding:9px 13px;border-bottom:1px solid var(--line2);
+  font-size:14px}
+.frow:last-child{border-bottom:none}
+.fd{color:var(--ink-soft);font-size:12px;min-width:38px}
+.fm{flex:1;min-width:0;word-break:break-word}
+.fa{font-variant-numeric:tabular-nums;font-weight:700;text-align:right;white-space:nowrap}
+.fa i{display:block;font-style:normal;font-size:10px;font-weight:400;color:var(--ink-soft)}
+.fa.in{color:var(--yes)} .fa.out{color:var(--danger)}
+.mercline{background:var(--maybe-pale);border-radius:9px;padding:7px 10px;margin-bottom:9px;
+  font-size:13px}
+.mercline b{font-variant-numeric:tabular-nums}
+
 .dangerbar{margin-top:10px;padding-top:9px;border-top:1px dashed var(--line);text-align:right}
 .dangerbar button{color:var(--danger);border-color:var(--danger-line)}
 .delcol{display:block;margin:3px auto 0;font-size:12px;color:var(--danger);
@@ -195,6 +224,8 @@ tfoot .mb{color:var(--maybe)}
 footer{text-align:center;color:var(--ink-soft);font-size:12px;padding:16px 0}
 
 @media (max-width:520px){
+  .fstats{grid-template-columns:repeat(2,1fr)}
+  .tabs button{padding:7px 4px;font-size:13px}
   th.namecol,td.namecol{width:92px;min-width:92px;padding:5px 5px}
   .pname{font-size:12px;gap:4px}
   .pname .dot{margin-top:5px}
@@ -283,6 +314,7 @@ let ADMIN = sessionStorage.getItem("ff14_admin") === "1";
 let TLDAY = null;                                  // 展開時間軸的日期
 let LOGS = {}, TAB = "board";                      // 戰報資料 / 目前分頁
 let HIST_N = 8;                                    // 歷史班表一次顯示幾週
+let FUND = {};                                     // 募款箱：{donations:{}, expenses:{}}
 
 onValue(ref(db,"config"), async s => {
   const v = s.val();
@@ -298,6 +330,7 @@ onValue(ref(db,"config"), async s => {
 });
 onValue(ref(db,"responses"), s => { RES = s.val() || {}; render(); });
 onValue(ref(db,"logs"),      s => { LOGS = s.val() || {}; render(); });
+onValue(ref(db,"fund"),      s => { FUND = s.val() || {}; render(); });
 
 const rol = m => ROLE[m?.role] || ROLE.dps;
 const members = () => Object.entries(CFG?.members || {})
@@ -335,7 +368,9 @@ function render(){
   const ms = members(), me = meObj(), S = sessions();
   let h = noticeBar() + meBar(me, ms) + tabBar();
 
-  if (TAB === "log"){
+  if (TAB === "fund"){
+    h += fundPage(ms);
+  } else if (TAB === "log"){
     h += logPage(ms);
   } else if (TAB === "hist"){
     h += histPage(ms);
@@ -378,7 +413,8 @@ function tabBar(){
   return `<div class="tabs">
     <button class="${TAB==="board"?"on":""}" data-tab="board">班表</button>
     <button class="${TAB==="hist"?"on":""}" data-tab="hist">歷史班表</button>
-    <button class="${TAB==="log"?"on":""}" data-tab="log">戰報紀錄</button></div>`;
+    <button class="${TAB==="log"?"on":""}" data-tab="log">戰報紀錄</button>
+    <button class="${TAB==="fund"?"on":""}" data-tab="fund">募款箱</button></div>`;
 }
 
 /* 歷史班表：過去的場次，依週分組、由近到遠。純檢視，不可修改 */
@@ -497,8 +533,199 @@ function logPage(ms){
         ${ADMIN ? `<button class="mini" data-clr="${k}">🧹 清空勾選</button>
                    <button class="mini" data-del="${k}" style="color:var(--danger)">🗑 刪除這場</button>` : ""}
       </div>
-      <div class="entry-bd">${logBlock(k, ms)}</div></div>`;
+      <div class="entry-bd">${mercLine(k)}${logBlock(k, ms)}</div></div>`;
   }).join("");
+}
+
+/* ================= 募款箱 ================= */
+const gil = n => Math.round(n||0).toLocaleString("en-US");
+// 大數字給人看的近似值，用來抓「少打一個 0」
+function approx(n){
+  const v = Math.abs(Math.round(n||0));
+  // 先固定兩位小數再去尾零，否則整數的 0 會被一起吃掉（200 → 2）
+  const trim = x => x.toFixed(2).replace(/\.?0+$/, "");
+  if (v >= 1e8) return trim(v/1e8) + " 億";
+  if (v >= 1e4) return trim(v/1e4) + " 萬";
+  return gil(v);
+}
+
+/* 依時間順序重放整本帳。順序會影響團長墊了多少，所以一律重算，不存結果 */
+function computeFund(ms){
+  const evs = [];
+  for (const [id,d] of Object.entries(FUND.donations || {})) evs.push({t:"d", id, ...d});
+  for (const [id,e] of Object.entries(FUND.expenses  || {})) evs.push({t:"e", id, ...e});
+  evs.sort((a,b) => String(a.date||"").localeCompare(String(b.date||"")) || (a.at||0)-(b.at||0));
+
+  const back = CFG?.backstopId || null;
+  const net = {};                                   // 每人「淨出錢」
+  const add = (id,v) => { if (id) net[id] = (net[id]||0) + v; };
+  let pool = 0, adv = 0, totalDon = 0, totalExp = 0;
+
+  for (const ev of evs){
+    const amt = Math.max(0, Math.round(+ev.amt || 0));
+    if (ev.t === "d"){
+      totalDon += amt;
+      add(ev.mid, amt);
+      const repay = Math.min(adv, amt);             // 先回補團長墊款
+      if (repay > 0 && back){ adv -= repay; add(back, -repay); }
+      pool += amt - repay;
+    } else {
+      totalExp += amt;
+      const use = Math.min(pool, amt);              // 先花池子裡的
+      pool -= use;
+      const short = amt - use;
+      if (short > 0){ adv += short; add(back, short); }
+    }
+  }
+
+  // 出資者＝淨出錢 > 0 的人；已退團但出過錢的也算，否則帳不平
+  const payers = [];
+  for (const [id,v] of Object.entries(net)){
+    if (v <= 0) continue;
+    const m = ms.find(x => x.id === id);
+    payers.push({ id, amt: v, name: m ? m.name : "（已退團）", role: m?.role || null, gone: !m });
+  }
+  payers.sort((a,b) => b.amt - a.amt);
+  const share = payers.length ? totalExp / payers.length : 0;
+  return { evs, pool, adv, net, totalDon, totalExp, share, payers, back };
+}
+
+function fundPage(ms){
+  const F = computeFund(ms);
+  const backName = F.back ? (ms.find(m=>m.id===F.back)?.name || "（已退團）") : null;
+
+  const warn = !F.back && ADMIN
+    ? `<div class="notice" style="margin-bottom:12px"><div class="nh">尚未指定墊款人</div>
+       花費超過箱內餘額時，差額沒有人可以記。請到 ⚙ 設定裡指定一位團員。</div>` : "";
+
+  const stats = `<div class="fstats">
+    <div class="stat"><small>箱內餘額</small><b>${gil(F.pool)}</b><i>${approx(F.pool)}</i></div>
+    <div class="stat"><small>累計捐款</small><b>${gil(F.totalDon)}</b><i>${approx(F.totalDon)}</i></div>
+    <div class="stat"><small>累計花費</small><b>${gil(F.totalExp)}</b><i>${approx(F.totalExp)}</i></div>
+    <div class="stat ${F.adv>0?"warn":""}"><small>${backName?esc(backName):"團長"}墊款未回補</small>
+      <b>${gil(F.adv)}</b><i>${approx(F.adv)}</i></div>
+  </div>`;
+
+  const shareTbl = F.payers.length ? `
+    <div class="board"><div class="sect">均攤對照</div>
+      <div class="fnote">總花費 ${gil(F.totalExp)} ÷ ${F.payers.length} 位出資者 ＝ 每人應攤 <b>${gil(F.share)}</b>（${approx(F.share)}）
+      ${F.pool>0?`<br>箱內另有 ${approx(F.pool)} 尚未動用，那筆錢仍屬於出資者。`:""}</div>
+      <div class="scroll"><table class="grid ftab">
+        <thead><tr><th class="namecol">出資者</th><th>實出</th><th>應攤</th><th>差額</th></tr></thead>
+        <tbody>${F.payers.map(p => {
+          const d = p.amt - F.share;
+          return `<tr><td class="namecol"><span class="pname">
+              ${p.role?`<span class="dot ${ROLE[p.role].c}"></span>`:""}
+              <span class="nm-t">${esc(p.name)}${p.id===F.back?" ⭐":""}</span></span></td>
+            <td class="num">${gil(p.amt)}<i>${approx(p.amt)}</i></td>
+            <td class="num soft">${gil(F.share)}</td>
+            <td class="num ${d>=0?"plus":"minus"}">${d>=0?"多 ":"少 "}${approx(Math.abs(d))}</td></tr>`;
+        }).join("")}</tbody>
+      </table></div></div>` : "";
+
+  const exps = F.evs.filter(e => e.t === "e").reverse();
+  const dons = F.evs.filter(e => e.t === "d").reverse();
+  const md = new Map(ms.map(m => [m.id, m.name]));
+
+  const expList = `<div class="board"><div class="sect">傭兵花費
+      ${ADMIN?`<button class="mini solid addbtn" id="addExp">＋ 新增</button>`:""}</div>
+    ${exps.length ? exps.map(e => `<div class="frow">
+        <span class="fd">${fmtD(e.date)}</span>
+        <span class="fm">${esc(e.merc||"（未填姓名）")}</span>
+        <span class="fa out">−${gil(e.amt)}<i>${approx(e.amt)}</i></span>
+        ${ADMIN?`<button class="mini" data-fe="${e.id}">改</button>
+                 <button class="mini" data-fx="e|${e.id}" style="color:var(--danger)">✕</button>`:""}
+      </div>`).join("") : `<div class="empty" style="padding:18px">還沒有花費紀錄。</div>`}</div>`;
+
+  const donList = `<div class="board"><div class="sect">捐款紀錄
+      ${ADMIN?`<button class="mini solid addbtn" id="addDon">＋ 新增</button>`:""}</div>
+    ${dons.length ? dons.map(d => `<div class="frow">
+        <span class="fd">${fmtD(d.date)}</span>
+        <span class="fm">${esc(md.get(d.mid) || "（已退團）")}</span>
+        <span class="fa in">+${gil(d.amt)}<i>${approx(d.amt)}</i></span>
+        ${ADMIN?`<button class="mini" data-fd="${d.id}">改</button>
+                 <button class="mini" data-fx="d|${d.id}" style="color:var(--danger)">✕</button>`:""}
+      </div>`).join("") : `<div class="empty" style="padding:18px">還沒有捐款紀錄。</div>`}</div>`;
+
+  return warn + stats + shareTbl + expList + donList;
+}
+
+// 戰報紀錄那天若有請傭兵，把它串進來一起看
+function mercLine(k){
+  const hits = Object.values(FUND.expenses || {}).filter(e => e.date === k);
+  if (!hits.length) return "";
+  return `<div class="mercline">⚔️ 傭兵：${hits.map(e =>
+    `${esc(e.merc||"未填姓名")} <b>${gil(e.amt)}</b>`).join("　·　")}</div>`;
+}
+
+const fmtD = s => { const d = new Date(String(s||"")+"T00:00:00");
+  return isNaN(d) ? "—" : `${d.getMonth()+1}/${d.getDate()}`; };
+
+/* 金額輸入：即時千分位 + 近似值提示，用來擋掉少打一個 0 */
+function bindMoney(id){
+  const el = $("#"+id), h = $("#"+id+"_h");
+  if (!el) return;
+  const sync = () => {
+    const raw = el.value.replace(/\D/g,"").slice(0,15);
+    el.value = raw ? Number(raw).toLocaleString("en-US") : "";
+    h.textContent = raw ? "≈ " + approx(Number(raw)) : " ";
+  };
+  el.addEventListener("input", sync); sync();
+}
+const moneyVal = id => Number(($("#"+id)?.value || "").replace(/\D/g,"")) || 0;
+
+function fundExpForm(id){
+  const e = id ? (FUND.expenses||{})[id] : null;
+  const names = [...new Set(Object.values(FUND.expenses||{}).map(x=>x.merc).filter(Boolean))];
+  showModal(`<h2>${id?"修改":"新增"}傭兵花費</h2>
+    <div class="fld"><label>日期</label>
+      <input type="date" id="fxd" value="${e?.date || dkey(new Date())}"></div>
+    <div class="fld"><label>傭兵姓名（多位用、分隔）</label>
+      <input id="fxm" list="mercs" value="${esc(e?.merc||"")}" placeholder="例：某某大腿、另一位">
+      <datalist id="mercs">${names.map(n=>`<option value="${esc(n)}">`).join("")}</datalist></div>
+    <div class="fld"><label>金額（gil）</label>
+      <input id="fxa" inputmode="numeric" value="${e?gil(e.amt):""}" placeholder="10000000">
+      <div class="hint" id="fxa_h">&nbsp;</div></div>
+    <div class="err" id="fxe"></div>
+    <div class="btnrow"><button class="btn ghost" id="fxc">取消</button>
+      <button class="btn" id="fxs">儲存</button></div>`);
+  bindMoney("fxa");
+  $("#fxc").onclick = closeModal;
+  $("#fxs").onclick = async () => {
+    const amt = moneyVal("fxa");
+    if (!amt) return $("#fxe").textContent = "金額要大於 0。";
+    if (!$("#fxd").value) return $("#fxe").textContent = "請選日期。";
+    const rec = { date:$("#fxd").value, merc:$("#fxm").value.trim(), amt, at: e?.at || Date.now() };
+    await set(ref(db, `fund/expenses/${id || uid()}`), rec);
+    closeModal();
+  };
+}
+
+function fundDonForm(id){
+  const d = id ? (FUND.donations||{})[id] : null;
+  const ms = members();
+  showModal(`<h2>${id?"修改":"新增"}捐款</h2>
+    <div class="fld"><label>捐款人</label>
+      <select id="fdm">${ms.map(m=>`<option value="${m.id}" ${d?.mid===m.id?"selected":""}>${esc(m.name)}</option>`).join("")}</select></div>
+    <div class="fld"><label>日期</label>
+      <input type="date" id="fdd" value="${d?.date || dkey(new Date())}"></div>
+    <div class="fld"><label>金額（gil）</label>
+      <input id="fda" inputmode="numeric" value="${d?gil(d.amt):""}" placeholder="2000000">
+      <div class="hint" id="fda_h">&nbsp;</div></div>
+    <div class="hint">日期會影響團長墊款的回補順序，補登舊帳時記得改對。</div>
+    <div class="err" id="fde"></div>
+    <div class="btnrow"><button class="btn ghost" id="fdc">取消</button>
+      <button class="btn" id="fds">儲存</button></div>`);
+  bindMoney("fda");
+  $("#fdc").onclick = closeModal;
+  $("#fds").onclick = async () => {
+    const amt = moneyVal("fda");
+    if (!amt) return $("#fde").textContent = "金額要大於 0。";
+    if (!ms.length) return $("#fde").textContent = "名單是空的，沒有人可以選。";
+    const rec = { mid:$("#fdm").value, date:$("#fdd").value, amt, at: d?.at || Date.now() };
+    await set(ref(db, `fund/donations/${id || uid()}`), rec);
+    closeModal();
+  };
 }
 
 function board(S, ms, me, title){
@@ -654,6 +881,17 @@ function bind(S, ms, me){
 
   document.querySelectorAll("[data-clr]").forEach(b => b.onclick = () => delSession(b.dataset.clr, false));
   document.querySelectorAll("[data-del]").forEach(b => b.onclick = () => delSession(b.dataset.del, true));
+
+  if ($("#addExp")) $("#addExp").onclick = () => fundExpForm(null);
+  if ($("#addDon")) $("#addDon").onclick = () => fundDonForm(null);
+  document.querySelectorAll("[data-fe]").forEach(b => b.onclick = () => fundExpForm(b.dataset.fe));
+  document.querySelectorAll("[data-fd]").forEach(b => b.onclick = () => fundDonForm(b.dataset.fd));
+  document.querySelectorAll("[data-fx]").forEach(b => b.onclick = async () => {
+    const [t, id] = b.dataset.fx.split("|");
+    const what = t === "e" ? "這筆傭兵花費" : "這筆捐款";
+    if (!confirm(`確定刪除${what}？\n\n整本帳會重新計算，團長墊款的數字也會跟著變動。`)) return;
+    await remove(ref(db, `fund/${t === "e" ? "expenses" : "donations"}/${id}`));
+  });
   document.querySelectorAll("[data-tl]").forEach(b => b.onclick = () => {
     TLDAY = (TLDAY === b.dataset.tl) ? null : b.dataset.tl; render();
   });
@@ -855,6 +1093,11 @@ function setupForm(first){
           <select id="bs">${opts2(rg2(0,1439), hm2m(c.start))}</select><span>→</span>
           <select id="be">${opts2(rg2(30,1740), hm2m(c.end))}</select></div>
         <div class="hint">超過 24:00 顯示「(隔日)」。團員可在此前後各 3 小時內調整。</div></div>
+      ${first?"":`<div class="fld"><label>募款箱墊款人</label>
+        <select id="bsp"><option value="">（未指定）</option>
+          ${members().map(m=>`<option value="${m.id}" ${c.backstopId===m.id?"selected":""}>${esc(m.name)}</option>`).join("")}</select>
+        <div class="hint">傭兵費用超過箱內餘額時，差額自動記在這個人頭上。</div></div>`}
+
       <div class="fld"><label>成團職能需求</label>
         <div style="display:flex;gap:8px">${["tank","healer","dps"].map(k=>
           `<label style="flex:1;font-size:13px">${ROLE[k].n}
@@ -885,6 +1128,7 @@ function setupForm(first){
     });
     const keep = () => { c.teamName = $("#tn").value; c.notice = $("#nt").value;
       c.start = raw(+$("#bs").value); c.end = raw(+$("#be").value);
+      if ($("#bsp")) c.backstopId = $("#bsp").value;
       for (const k of ["tank","healer","dps"]) need[k] = +$(`#n_${k}`).value||0; };
 
     $("#cancel").onclick = closeModal;
@@ -902,6 +1146,7 @@ function setupForm(first){
         notice: $("#nt").value.trim(),
         weekdays: wd.sort((a,b)=>a-b),
         start: c.start, end: c.end, need,
+        backstopId: $("#bsp") ? $("#bsp").value : (CFG.backstopId || ""),
         adminHash: pw ? await hash(pw) : CFG.adminHash
       });
       if (first){ ADMIN = true; sessionStorage.setItem("ff14_admin","1"); }
